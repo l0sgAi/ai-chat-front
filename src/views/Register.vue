@@ -111,6 +111,9 @@ import {
     PhonePortraitOutline
 } from '@vicons/ionicons5';
 
+// 引入API模块
+import { userApi, systemApi } from '../api';
+
 // 引入独立的CSS文件
 import '../assets/css/register.css';
 
@@ -118,7 +121,7 @@ const router = useRouter();
 const message = useMessage();
 
 // 表单数据
-const formRef = ref(null);
+const formRef = ref({});
 const formData = reactive({
     username: '',
     password: '',
@@ -174,28 +177,63 @@ const rules = {
 const errorMessage = ref('');
 
 // 注册处理
-const register = (e) => {
+const register = async (e) => {
     e.preventDefault();
-    formRef.value?.validate((errors) => {
-        if (!errors) {
-            // 这里应该是实际的注册逻辑，例如调用API
-            // 模拟注册成功
+    // console.log('开始注册', formData, formRef.value);
+    try {
+        await formRef.value?.validate();  // 这是核心改动
+        console.log('表单验证通过');
+
+        if (formData.captcha.toLowerCase() !== randomCaptcha.value.toLowerCase()) {
+            message.error('验证码输入错误');
+            refreshCaptcha();
+            return;
+        }
+
+        const response = await userApi.register({
+            username: formData.username,
+            password: formData.password,
+            email: formData.email,
+            phone: formData.phone,
+            captcha: formData.captcha
+        });
+
+        // console.log(response);
+        if (response.code !== 200) {
+            message.error(response.message);
+            refreshCaptcha();
+            return;
+        }
+
+        // 保存token信息到localStorage
+        if (response.data && response.data.tokenName && response.data.tokenValue) {
+            localStorage.setItem('tokenName', response.data.tokenName);
+            localStorage.setItem('tokenValue', response.data.tokenValue);
             localStorage.setItem('isLoggedIn', 'true');
-            message.success('注册成功');
-            router.push('/chat');
+        }
+
+        message.success('注册成功');
+        router.push('/chat');
+    } catch (error) {
+        // 捕获表单校验失败或注册接口异常
+        if (error?.message) {
+            errorMessage.value = error.message;
         } else {
             errorMessage.value = '请填写所有必填字段并确保输入正确';
         }
-    });
+        console.error('注册失败:', error);
+        refreshCaptcha();
+    }
 };
 
-// 生成随机验证码（仅作为示例）
-const randomCaptcha = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+// 验证码
+const randomCaptcha = ref(Math.random().toString(36).substring(2, 8).toUpperCase());
 
 // 刷新验证码
-const refreshCaptcha = () => {
-    const newCaptcha = Math.random().toString(36).substring(2, 8).toUpperCase();
-    randomCaptcha.value = newCaptcha;
+const refreshCaptcha = async () => {
+    // TODO 换成后端校验
+    randomCaptcha.value = Math.random().toString(36).substring(2, 8).toUpperCase();
 };
 </script>
 
@@ -209,7 +247,8 @@ const refreshCaptcha = () => {
     height: 34px;
     background-color: #e8f0fe;
     border-radius: 4px;
-    font-family: monospace;
+    font-family: "Cascadia Code";
+    font-style: italic;
     font-weight: bold;
     font-size: 18px;
     color: #333;

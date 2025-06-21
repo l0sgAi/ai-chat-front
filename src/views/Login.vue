@@ -10,7 +10,7 @@
 
             <n-form ref="formRef" :model="formData" :rules="rules" label-placement="left" @submit.prevent="login">
                 <n-form-item path="username" label="用户名">
-                    <n-input class="dark-color" v-model:value="formData.username" placeholder="请输入用户名">
+                    <n-input class="dark-color" v-model:value="formData.username" placeholder="请输入注册邮箱/手机号">
                         <template #prefix>
                             <n-icon :component="PersonOutline" />
                         </template>
@@ -76,6 +76,9 @@ import {
 } from 'naive-ui';
 import { PersonOutline, LockClosedOutline, ShieldCheckmarkOutline } from '@vicons/ionicons5';
 
+// 引入API模块
+import { userApi, systemApi } from '../api';
+
 // 引入独立的CSS文件
 import '../assets/css/login.css';
 
@@ -115,26 +118,53 @@ const errorMessage = ref('');
 // 登录处理
 const login = (e) => {
     e.preventDefault();
-    formRef.value?.validate((errors) => {
+    formRef.value?.validate(async (errors) => {
         if (!errors) {
-            // 这里应该是实际的登录逻辑，例如调用API
-            // 模拟登录成功
-            localStorage.setItem('isLoggedIn', 'true');
-            message.success('登录成功');
-            router.push('/chat');
+            try {
+                // 调用登录API
+                await userApi.login({
+                    userName: formData.username,
+                    password: formData.password,
+                    captcha: formData.captcha,
+                    rememberMe: formData.rememberMe
+                }).then((res) => {
+                    if (res.code !== 200) {
+                        message.error(res.message);
+                        refreshCaptcha();
+                        return;
+                    }
+
+                    // 保存token信息到localStorage
+                    if (res.data && res.data.tokenName && res.data.tokenValue) {
+                        localStorage.setItem('tokenName', res.data.tokenName);
+                        localStorage.setItem('tokenValue', res.data.tokenValue);
+                        localStorage.setItem('isLoggedIn', 'true');
+                        console.log('保存token信息完成:', res.data);
+                    }
+
+                    message.success('登录成功');
+                    router.push('/chat');
+                })
+            } catch (error) {
+                // 处理登录失败
+                errorMessage.value = error.message || '登录失败，请检查用户名和密码';
+                console.error('登录失败:', error);
+                // 刷新验证码
+                refreshCaptcha();
+            }
         } else {
             errorMessage.value = '请填写所有必填字段';
         }
     });
 };
 
-// 生成随机验证码（仅作为示例）
-const randomCaptcha = Math.random().toString(36).substring(2, 8).toUpperCase();
+// 验证码
+const randomCaptcha = ref(Math.random().toString(36).substring(2, 8).toUpperCase());
 
 // 刷新验证码
-const refreshCaptcha = () => {
-    const newCaptcha = Math.random().toString(36).substring(2, 8).toUpperCase();
-    randomCaptcha.value = newCaptcha;
+const refreshCaptcha = async () => {
+    // TODO 换成后端校验
+    randomCaptcha.value = Math.random().toString(36).substring(2, 8).toUpperCase();
 };
 </script>
 
@@ -148,7 +178,8 @@ const refreshCaptcha = () => {
     height: 34px;
     background-color: #4a4a4a;
     border-radius: 4px;
-    font-family: monospace;
+    font-family: "Cascadia Code";
+    font-style: italic;
     font-weight: bold;
     font-size: 18px;
     color: #ffffff;

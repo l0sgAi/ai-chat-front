@@ -101,6 +101,7 @@
 </template>
 
 <script setup>
+import { userApi, systemApi } from '../api';
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMessage, darkTheme } from 'naive-ui';
@@ -262,10 +263,17 @@ const sendMessage = () => {
     newMessage.value = '';
 };
 
-const logout = () => {
-    localStorage.removeItem('isLoggedIn');
-    message.success('已退出登录');
-    router.push('/login');
+const logout = async () => {
+    try {
+        await userApi.logout();
+    } catch (error) {
+        message.error(error.message);
+        return;
+    } finally {
+        localStorage.removeItem('isLoggedIn');
+        message.success('已退出登录');
+        router.push('/login');
+    }
 };
 </script>
 

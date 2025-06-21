@@ -1,7 +1,7 @@
 .login-container {
     overflow: hidden;
     background-color: white;
-    background-image: linear-gradient(135deg, #ff0a01 0%, #03d9ff 100%);
+    background-image: linear-gradient(135deg, #ff766c 0%, #fffd72 100%);
     display: flex;
     flex-direction: column;
     width: 100%;
