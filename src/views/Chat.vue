@@ -101,7 +101,7 @@
 </template>
 
 <script setup>
-import { userApi, systemApi } from '../api';
+import { userApi, chatApi } from '../api';
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMessage, darkTheme } from 'naive-ui';
@@ -143,17 +143,17 @@ const activeConversationId = ref(1);
 
 // 模拟会话列表数据
 const conversations = ref([
-    { id: 1, title: '关于AI技术的讨论', lastMessage: '你好！我是AI助手，有什么可以帮到你的吗？', time: new Date(), messages: [] },
-    { id: 2, title: '编程问题咨询', lastMessage: '请问如何优化这段代码？', time: new Date(Date.now() - 3600000), messages: [] },
-    { id: 3, title: '旅行计划建议', lastMessage: '我想去欧洲旅行，有什么建议？', time: new Date(Date.now() - 86400000), messages: [] },
+    { id: 1, title: '测试会话', lastMessage: '初始会话', time: new Date(), messages: [] },
+    // { id: 2, title: '编程问题咨询', lastMessage: '请问如何优化这段代码？', time: new Date(Date.now() - 3600000), messages: [] },
+    // { id: 3, title: '旅行计划建议', lastMessage: '我想去欧洲旅行，有什么建议？', time: new Date(Date.now() - 86400000), messages: [] },
 ]);
 
 // 模拟一些初始消息
 onMounted(() => {
     // 为第一个会话添加消息
-    conversations.value[0].messages = [
-        { id: 1, sender: 'AI助手', content: '你好！我是AI助手，有什么可以帮到你的吗？', time: new Date().toLocaleTimeString() },
-    ];
+    // conversations.value[0].messages = [
+    //     { id: 1, sender: 'AI助手', content: '你好！我是AI助手，有什么可以帮到你的吗？', time: new Date().toLocaleTimeString() },
+    // ];
 
     // 设置当前消息列表为活跃会话的消息
     messages.value = conversations.value.find(conv => conv.id === activeConversationId.value)?.messages || [];
@@ -223,41 +223,57 @@ const handleConversationAction = (key, convId) => {
     }
 };
 
-const sendMessage = () => {
+const sendMessage = async () => {
     if (!newMessage.value.trim()) return;
 
-    // 添加用户消息
-    const userMsg = {
-        id: Date.now(),
-        sender: username.value,
-        content: newMessage.value,
-        time: new Date().toLocaleTimeString()
-    };
-    messages.value.push(userMsg);
+    // // 添加用户消息
+    // const userMsg = {
+    //     id: Date.now(),
+    //     sender: username.value,
+    //     content: newMessage.value,
+    //     time: new Date().toLocaleTimeString()
+    // };
+    // messages.value.push(userMsg);
 
-    // 更新当前会话的最后消息和时间
-    const currentConv = conversations.value.find(conv => conv.id === activeConversationId.value);
-    if (currentConv) {
-        currentConv.lastMessage = userMsg.content;
-        currentConv.time = new Date();
+    // // 更新当前会话的最后消息和时间
+    // const currentConv = conversations.value.find(conv => conv.id === activeConversationId.value);
+    // if (currentConv) {
+    //     currentConv.lastMessage = userMsg.content;
+    //     currentConv.time = new Date();
+    // }
+
+    // // 模拟AI回复
+    // setTimeout(() => {
+    //     const aiMsg = {
+    //         id: Date.now() + 1,
+    //         sender: 'AI助手',
+    //         content: `我收到了你的消息: "${newMessage.value}"`,
+    //         time: new Date().toLocaleTimeString()
+    //     };
+    //     messages.value.push(aiMsg);
+
+    //     // 更新会话列表中的最后消息
+    //     if (currentConv) {
+    //         currentConv.lastMessage = aiMsg.content;
+    //         currentConv.time = new Date();
+    //     }
+    // }, 1000);
+    try {
+        // 调用登录API
+        await chatApi.sendMessage({
+            question: newMessage.value.trim(),
+            modelId: 1
+        }).then((res) => {
+            if (res.code !== 200) {
+                message.error(`错误:${res.message}`);
+                return;
+            }
+            message.success('发送成功');
+        })
+    } catch (error) {
+        // 处理登录失败
+        message.error(`错误:${error}`);
     }
-
-    // 模拟AI回复
-    setTimeout(() => {
-        const aiMsg = {
-            id: Date.now() + 1,
-            sender: 'AI助手',
-            content: `我收到了你的消息: "${newMessage.value}"`,
-            time: new Date().toLocaleTimeString()
-        };
-        messages.value.push(aiMsg);
-
-        // 更新会话列表中的最后消息
-        if (currentConv) {
-            currentConv.lastMessage = aiMsg.content;
-            currentConv.time = new Date();
-        }
-    }, 1000);
 
     // 清空输入框
     newMessage.value = '';
@@ -266,13 +282,12 @@ const sendMessage = () => {
 const logout = async () => {
     try {
         await userApi.logout();
-    } catch (error) {
-        message.error(error.message);
-        return;
-    } finally {
         localStorage.removeItem('isLoggedIn');
         message.success('已退出登录');
         router.push('/login');
+    } catch (error) {
+        message.error(`错误:${error.message}`);
+        return;
     }
 };
 </script>

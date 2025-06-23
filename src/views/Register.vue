@@ -108,6 +108,7 @@ import {
     LockClosedOutline,
     ShieldCheckmarkOutline,
     MailOutline,
+    SchoolOutline,
     PhonePortraitOutline
 } from '@vicons/ionicons5';
 
@@ -157,8 +158,16 @@ const rules = {
         message: '请输入邮箱',
         trigger: 'blur',
         validator: (rule, value) => {
+            // 邮箱正则表达式
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-            return emailRegex.test(value) ? true : new Error('请输入有效的邮箱地址')
+            // 学号正则表达式（假设学号是纯数字且长度在5-20位之间）
+            // const studentIdRegex = /^\d{5,20}$/
+
+            if (emailRegex.test(value)) {
+                return true
+            } else {
+                return new Error('请输入有效的邮箱')
+            }
         }
     },
     captcha: {

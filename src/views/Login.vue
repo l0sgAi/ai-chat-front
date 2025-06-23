@@ -10,7 +10,7 @@
 
             <n-form ref="formRef" :model="formData" :rules="rules" label-placement="left" @submit.prevent="login">
                 <n-form-item path="username" label="用户名">
-                    <n-input class="dark-color" v-model:value="formData.username" placeholder="请输入注册邮箱/手机号">
+                    <n-input class="dark-color" v-model:value="formData.username" placeholder="请输入邮箱/手机号">
                         <template #prefix>
                             <n-icon :component="PersonOutline" />
                         </template>
