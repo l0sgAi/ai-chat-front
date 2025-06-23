@@ -144,16 +144,16 @@ const activeConversationId = ref(1);
 // 模拟会话列表数据
 const conversations = ref([
     { id: 1, title: '关于AI技术的讨论', lastMessage: '你好！我是AI助手，有什么可以帮到你的吗？', time: new Date(), messages: [] },
-    { id: 2, title: '编程问题咨询', lastMessage: '请问如何优化这段代码？', time: new Date(Date.now() - 3600000), messages: [] },
-    { id: 3, title: '旅行计划建议', lastMessage: '我想去欧洲旅行，有什么建议？', time: new Date(Date.now() - 86400000), messages: [] },
+    // { id: 2, title: '编程问题咨询', lastMessage: '请问如何优化这段代码？', time: new Date(Date.now() - 3600000), messages: [] },
+    // { id: 3, title: '旅行计划建议', lastMessage: '我想去欧洲旅行，有什么建议？', time: new Date(Date.now() - 86400000), messages: [] },
 ]);
 
 // 模拟一些初始消息
 onMounted(() => {
     // 为第一个会话添加消息
-    conversations.value[0].messages = [
-        { id: 1, sender: 'AI助手', content: '你好！我是AI助手，有什么可以帮到你的吗？', time: new Date().toLocaleTimeString() },
-    ];
+    // conversations.value[0].messages = [
+    //     { id: 1, sender: 'AI助手', content: '你好！我是AI助手，有什么可以帮到你的吗？', time: new Date().toLocaleTimeString() },
+    // ];
 
     // 设置当前消息列表为活跃会话的消息
     messages.value = conversations.value.find(conv => conv.id === activeConversationId.value)?.messages || [];

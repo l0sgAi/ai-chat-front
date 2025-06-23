@@ -10,16 +10,54 @@ const routes = [
     name: "Login",
     component: () => import("../views/Login.vue"),
   },
-  {
-    path: "/register",
-    name: "Register",
-    component: () => import("../views/Register.vue"),
-  },
+  // {
+  //   path: "/register",
+  //   name: "Register",
+  //   component: () => import("../views/Register.vue"),
+  // },
   {
     path: "/chat",
     name: "Chat",
     component: () => import("../views/Chat.vue"),
     meta: { requiresAuth: true },
+  },
+  {
+    path: "/dashboard",
+    name: "Dashboard",
+    component: () => import("../views/Dashboard.vue"),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: "",
+        name: "DashboardHome",
+        component: () => import("../views/dashboard/DashboardHome.vue"),
+      },
+      {
+        path: "user-info",
+        name: "UserInfo",
+        component: () => import("../views/dashboard/UserInfo.vue"),
+      },
+      {
+        path: "question-bank",
+        name: "QuestionBank",
+        component: () => import("../views/dashboard/QuestionBank.vue"),
+      },
+      {
+        path: "online-exam",
+        name: "OnlineExam",
+        component: () => import("../views/dashboard/OnlineExam.vue"),
+      },
+      {
+        path: "grade-evaluation",
+        name: "GradeEvaluation",
+        component: () => import("../views/dashboard/GradeEvaluation.vue"),
+      },
+      {
+        path: "data-analysis",
+        name: "DataAnalysis",
+        component: () => import("../views/dashboard/DataAnalysis.vue"),
+      },
+    ],
   },
 ];
 

@@ -1,7 +1,7 @@
 import { get, post, put, del } from '../utils/request';
 
 // API基础URL，可以从环境变量中获取
-const BASE_URL = 'http://127.0.0.1:8575';
+const BASE_URL = '';
 
 /**
  * 用户相关API

@@ -10,7 +10,7 @@
 
             <n-form ref="formRef" :model="formData" :rules="rules" label-placement="left" @submit.prevent="login">
                 <n-form-item path="username" label="用户名">
-                    <n-input class="dark-color" v-model:value="formData.username" placeholder="请输入注册邮箱/手机号">
+                    <n-input class="dark-color" v-model:value="formData.username" placeholder="请输入学号/管理员用户名">
                         <template #prefix>
                             <n-icon :component="PersonOutline" />
                         </template>
@@ -51,9 +51,9 @@
 
                 <div class="form-footer">
                     <n-button class="dark-color" text>忘记密码？</n-button>
-                    <div class="register-link">
+                    <!-- <div class="register-link">
                         <router-link to="/register">没有账号？立即注册</router-link>
-                    </div>
+                    </div> -->
                 </div>
             </n-form>
         </div>
@@ -143,7 +143,7 @@ const login = (e) => {
                     }
 
                     message.success('登录成功');
-                    router.push('/chat');
+                    router.push('/dashboard');
                 })
             } catch (error) {
                 // 处理登录失败
