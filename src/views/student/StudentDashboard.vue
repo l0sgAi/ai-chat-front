@@ -4,7 +4,7 @@
             <!-- 侧边栏导航 -->
             <n-layout has-sider>
                 <n-layout-sider bordered collapse-mode="width" :collapsed-width="64" :width="240" :collapsed="collapsed"
-                    show-trigger @collapse="onSiderCollapse" @expand="onSiderExpand" class="dashboard-sider">
+                    show-trigger @collapse="collapsed = true" @expand="collapsed = false" class="dashboard-sider">
                     <div class="logo-container">
                         <img src="/exam.svg" alt="Logo" class="logo" />
                         <h1 class="title" v-if="!collapsed">在线考试系统</h1>
@@ -45,7 +45,7 @@
 
                     <!-- 主内容区域 -->
                     <n-layout-content class="dashboard-main">
-                        <!-- 使用router-view显示子路由内容，包括DashboardHome欢迎页面 -->
+                        <!-- 使用router-view显示子路由内容 -->
                         <router-view />
                     </n-layout-content>
 
@@ -60,10 +60,10 @@
 </template>
 
 <script setup>
-import { h, ref, computed, onMounted } from 'vue';
+import { h, ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useMessage, darkTheme } from 'naive-ui';
-import { userApi } from '../api';
+import { userApi } from '../../api';
 import {
     NConfigProvider,
     NLayout,
@@ -82,52 +82,36 @@ import {
 } from 'naive-ui';
 import {
     PersonOutline,
-    BookOutline,
     DocumentTextOutline,
-    BarChartOutline,
-    SettingsOutline,
     LogOutOutline,
-    SchoolOutline,
-    AnalyticsOutline
+    TimeOutline
 } from '@vicons/ionicons5';
 
 // 引入CSS
-import '../assets/css/dashboard.css';
+import '../../assets/css/dashboard.css';
 
 const router = useRouter();
 const route = useRoute();
 const message = useMessage();
 
 // 用户信息
-const username = ref('管理员');
+const username = ref('学生');
 const collapsed = ref(false);
 const activeKey = ref(null);
 
-// 菜单选项
+// 菜单选项 - 学生只有两个选项
 const menuOptions = [
     {
-        label: '用户信息管理',
-        key: 'user-info',
-        icon: renderIcon(PersonOutline),
-        path: '/dashboard/user-info'
-    },
-    {
-        label: '试题库管理',
-        key: 'question-bank',
-        icon: renderIcon(BookOutline),
-        path: '/dashboard/question-bank'
-    },
-    {
-        label: '在线考试管理',
-        key: 'online-exam',
+        label: '开始考试',
+        key: 'exam-list',
         icon: renderIcon(DocumentTextOutline),
-        path: '/dashboard/online-exam'
+        path: '/student/exam-list'
     },
     {
-        label: '数据统计分析',
-        key: 'data-analysis',
-        icon: renderIcon(AnalyticsOutline),
-        path: '/dashboard/data-analysis'
+        label: '历史考试',
+        key: 'history-exams',
+        icon: renderIcon(TimeOutline),
+        path: '/student/history-exams'
     }
 ];
 
@@ -137,11 +121,6 @@ const userOptions = [
         label: '个人信息',
         key: 'profile',
         icon: renderIcon(PersonOutline)
-    },
-    {
-        label: '设置',
-        key: 'settings',
-        icon: renderIcon(SettingsOutline)
     },
     {
         label: '退出登录',
@@ -161,26 +140,6 @@ const currentMenuTitle = computed(() => {
     return currentMenu ? currentMenu.label : '欢迎';
 });
 
-// 处理侧边栏收缩
-const onSiderCollapse = () => {
-    collapsed.value = true;
-    updateHeaderPosition();
-};
-
-// 处理侧边栏展开
-const onSiderExpand = () => {
-    collapsed.value = false;
-    updateHeaderPosition();
-};
-
-// 更新导航栏位置
-const updateHeaderPosition = () => {
-    const header = document.querySelector('.dashboard-header');
-    if (header) {
-        header.style.left = collapsed.value ? '64px' : '240px';
-    }
-};
-
 // 处理菜单点击
 const handleMenuUpdate = (key) => {
     activeKey.value = key;
@@ -196,8 +155,6 @@ const handleUserAction = (key) => {
         logout();
     } else if (key === 'profile') {
         message.info('个人信息功能待实现');
-    } else if (key === 'settings') {
-        message.info('设置功能待实现');
     }
 };
 
@@ -216,11 +173,6 @@ const logout = async () => {
         router.push('/login');
     }
 };
-
-// 组件挂载时初始化导航栏位置
-onMounted(() => {
-    updateHeaderPosition();
-});
 </script>
 
 <style>

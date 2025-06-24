@@ -1,12 +1,12 @@
 <template>
-    <div class="online-exam-container">
-        <n-card title="在线考试" class="online-exam-card">
+    <div class="exam-list-container">
+        <n-card title="可参加的考试" class="exam-list-card">
             <!-- 考试列表/考试进行中的切换 -->
             <n-tabs type="line" animated v-model:value="activeTab">
                 <n-tab-pane name="exam-list" tab="考试列表">
                     <!-- 考试列表 -->
                     <n-space vertical>
-                        <n-space class="filter-margin">
+                        <n-space>
                             <n-input v-model:value="searchKeyword" placeholder="搜索考试名称" style="width: 200px">
                                 <template #prefix>
                                     <n-icon><search-outline /></n-icon>
@@ -199,10 +199,372 @@ import {
     NDescriptionsItem,
     NResult
 } from 'naive-ui';
-import {
-    SearchOutline
-} from '@vicons/ionicons5';
+import { SearchOutline } from '@vicons/ionicons5';
 
-// 实现在线考试功能的代码
-// ...
+const message = useMessage();
+
+// 考试列表相关
+const activeTab = ref('exam-list');
+const searchKeyword = ref('');
+const selectedStatus = ref(null);
+
+// 状态选项
+const statusOptions = [
+    { label: '全部', value: null },
+    { label: '未开始', value: 'upcoming' },
+    { label: '进行中', value: 'ongoing' },
+    { label: '已结束', value: 'completed' }
+];
+
+// 模拟考试数据
+const exams = reactive([
+    {
+        id: 1,
+        title: '期中考试 - 数学',
+        startTime: new Date('2023-11-01T09:00:00'),
+        endTime: new Date('2023-11-01T11:00:00'),
+        duration: 120,
+        totalScore: 100,
+        status: 'completed',
+        description: '本次考试包含选择题、填空题和解答题，满分100分。'
+    },
+    {
+        id: 2,
+        title: '期中考试 - 英语',
+        startTime: new Date('2023-11-02T14:00:00'),
+        endTime: new Date('2023-11-02T16:00:00'),
+        duration: 120,
+        totalScore: 100,
+        status: 'completed',
+        description: '本次考试包含听力、阅读理解和写作，满分100分。'
+    },
+    {
+        id: 3,
+        title: '期末考试 - 数学',
+        startTime: new Date('2023-12-20T09:00:00'),
+        endTime: new Date('2023-12-20T11:00:00'),
+        duration: 120,
+        totalScore: 100,
+        status: 'upcoming',
+        description: '本次考试包含选择题、填空题和解答题，满分100分。'
+    },
+    {
+        id: 4,
+        title: '期末考试 - 英语',
+        startTime: new Date(),  // 当前时间，表示正在进行
+        endTime: new Date(Date.now() + 2 * 60 * 60 * 1000),  // 2小时后
+        duration: 120,
+        totalScore: 100,
+        status: 'ongoing',
+        description: '本次考试包含听力、阅读理解和写作，满分100分。'
+    }
+]);
+
+// 表格列定义
+const columns = [
+    {
+        title: '考试名称',
+        key: 'title',
+    },
+    {
+        title: '开始时间',
+        key: 'startTime',
+        render(row) {
+            return formatDate(row.startTime);
+        }
+    },
+    {
+        title: '结束时间',
+        key: 'endTime',
+        render(row) {
+            return formatDate(row.endTime);
+        }
+    },
+    {
+        title: '考试时长',
+        key: 'duration',
+        render(row) {
+            return `${row.duration} 分钟`;
+        }
+    },
+    {
+        title: '状态',
+        key: 'status',
+        render(row) {
+            return h(
+                'div',
+                {
+                    class: `status-tag ${row.status}`
+                },
+                { default: () => getStatusName(row.status) }
+            );
+        }
+    },
+    {
+        title: '操作',
+        key: 'actions',
+        render(row) {
+            return h(
+                NSpace,
+                {},
+                {
+                    default: () => [
+                        h(
+                            NButton,
+                            {
+                                size: 'small',
+                                onClick: () => viewExamDetail(row)
+                            },
+                            { default: () => '详情' }
+                        ),
+                        row.status === 'ongoing' ?
+                            h(
+                                NButton,
+                                {
+                                    type: 'primary',
+                                    size: 'small',
+                                    onClick: () => startExam(row)
+                                },
+                                { default: () => '开始考试' }
+                            ) : null
+                    ]
+                }
+            );
+        }
+    }
+];
+
+// 分页设置
+const pagination = reactive({
+    page: 1,
+    pageSize: 10,
+    showSizePicker: true,
+    pageSizes: [10, 20, 30, 40],
+    onChange: (page) => {
+        pagination.page = page;
+    },
+    onUpdatePageSize: (pageSize) => {
+        pagination.pageSize = pageSize;
+        pagination.page = 1;
+    }
+});
+
+// 过滤后的考试列表
+const filteredExams = computed(() => {
+    return exams.filter(exam => {
+        // 关键字过滤
+        const keywordMatch = !searchKeyword.value || exam.title.toLowerCase().includes(searchKeyword.value.toLowerCase());
+        // 状态过滤
+        const statusMatch = !selectedStatus.value || exam.status === selectedStatus.value;
+        return keywordMatch && statusMatch;
+    });
+});
+
+// 搜索考试
+const searchExams = () => {
+    // 已通过计算属性实现
+    message.success('搜索完成');
+};
+
+// 重置搜索
+const resetSearch = () => {
+    searchKeyword.value = '';
+    selectedStatus.value = null;
+    message.success('已重置搜索条件');
+};
+
+// 查看考试详情
+const selectedExam = ref(null);
+const showExamDetailModal = ref(false);
+
+const viewExamDetail = (exam) => {
+    selectedExam.value = exam;
+    showExamDetailModal.value = true;
+};
+
+// 开始考试
+const currentExam = ref(null);
+const examStarted = ref(false);
+const userAnswers = reactive({});
+
+const startExam = (exam) => {
+    // 关闭详情模态框
+    showExamDetailModal.value = false;
+
+    // 设置当前考试
+    currentExam.value = {
+        ...exam,
+        questions: [
+            {
+                id: 1,
+                type: 'single',
+                content: '下列哪个选项是正确的？',
+                options: [
+                    { key: 'A', value: '选项A' },
+                    { key: 'B', value: '选项B' },
+                    { key: 'C', value: '选项C' },
+                    { key: 'D', value: '选项D' }
+                ],
+                score: 5
+            },
+            {
+                id: 2,
+                type: 'multiple',
+                content: '以下哪些选项是正确的？（多选）',
+                options: [
+                    { key: 'A', value: '选项A' },
+                    { key: 'B', value: '选项B' },
+                    { key: 'C', value: '选项C' },
+                    { key: 'D', value: '选项D' }
+                ],
+                score: 10
+            },
+            {
+                id: 3,
+                type: 'truefalse',
+                content: '这道题的答案是正确的。',
+                score: 5
+            },
+            {
+                id: 4,
+                type: 'fillblank',
+                content: '请填写正确答案：___',
+                score: 10
+            },
+            {
+                id: 5,
+                type: 'shortanswer',
+                content: '请简要说明你的观点。',
+                score: 20
+            }
+        ]
+    };
+
+    // 初始化答案
+    currentExam.value.questions.forEach(q => {
+        if (q.type === 'multiple') {
+            userAnswers[q.id] = [];
+        } else {
+            userAnswers[q.id] = '';
+        }
+    });
+
+    // 切换到考试界面
+    activeTab.value = 'exam-taking';
+    examStarted.value = true;
+
+    message.success('考试已开始，请认真作答');
+};
+
+// 提交考试
+const examResult = ref(null);
+const showExamResultModal = ref(false);
+
+const submitExam = () => {
+    // 检查是否有未完成的题目
+    const unansweredQuestions = currentExam.value.questions.filter(q => {
+        if (q.type === 'multiple') {
+            return !userAnswers[q.id] || userAnswers[q.id].length === 0;
+        }
+        return !userAnswers[q.id];
+    });
+
+    if (unansweredQuestions.length > 0) {
+        if (!window.confirm(`您还有 ${unansweredQuestions.length} 道题目未完成，确定要提交吗？`)) {
+            return;
+        }
+    }
+
+    // 模拟评分
+    const totalScore = currentExam.value.totalScore;
+    const score = Math.floor(Math.random() * 41) + 60; // 随机生成60-100的分数
+
+    examResult.value = {
+        examId: currentExam.value.id,
+        title: currentExam.value.title,
+        score,
+        totalScore,
+        submittedAt: new Date()
+    };
+
+    // 显示结果
+    showExamResultModal.value = true;
+    examStarted.value = false;
+
+    // 重置
+    setTimeout(() => {
+        activeTab.value = 'exam-list';
+        currentExam.value = null;
+        Object.keys(userAnswers).forEach(key => delete userAnswers[key]);
+    }, 500);
+};
+
+// 格式化日期
+const formatDate = (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
+
+// 获取状态名称
+const getStatusName = (status) => {
+    const statusMap = {
+        'upcoming': '未开始',
+        'ongoing': '进行中',
+        'completed': '已结束'
+    };
+    return statusMap[status] || status;
+};
+
+// 获取题型名称
+const getQuestionTypeName = (type) => {
+    const typeMap = {
+        'single': '单选题',
+        'multiple': '多选题',
+        'truefalse': '判断题',
+        'fillblank': '填空题',
+        'shortanswer': '简答题'
+    };
+    return typeMap[type] || type;
+};
 </script>
+
+<style scoped>
+.exam-list-container {
+    padding: 20px;
+}
+
+.exam-list-card {
+    min-height: 500px;
+}
+
+.status-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.status-tag.upcoming {
+    background-color: #e6f7ff;
+    color: #1890ff;
+}
+
+.status-tag.ongoing {
+    background-color: #f6ffed;
+    color: #52c41a;
+}
+
+.status-tag.completed {
+    background-color: #f5f5f5;
+    color: #666;
+}
+
+.question-type-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    background-color: #f5f5f5;
+}
+</style>

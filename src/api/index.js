@@ -60,9 +60,28 @@ export const systemApi = {
   getCaptcha: () => get(`${BASE_URL}/system/captcha`),
 };
 
+/**
+ * 学生相关API
+ */
+export const studentApi = {
+  // 添加学生
+  addStudent: (data) => post(`${BASE_URL}/exam/student/add`, data),
+  
+  // 查询学生列表
+  queryStudents: (keyWord, pageNum = 1, pageSize = 10) => 
+    get(`${BASE_URL}/exam/student/query`, { keyWord, pageNum, pageSize }),
+  
+  // 更新学生信息
+  updateStudent: (data) => put(`${BASE_URL}/exam/student/update`, data),
+  
+  // 删除学生
+  deleteStudent: (id) => put(`${BASE_URL}/exam/student/delete`, null, { params: { id } }),
+};
+
 // 导出所有API
 export default {
   userApi,
   chatApi,
   systemApi,
+  studentApi,
 };

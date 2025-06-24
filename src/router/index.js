@@ -25,7 +25,7 @@ const routes = [
     path: "/dashboard",
     name: "Dashboard",
     component: () => import("../views/Dashboard.vue"),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, requiresAdmin: true },
     children: [
       {
         path: "",
@@ -48,14 +48,31 @@ const routes = [
         component: () => import("../views/dashboard/OnlineExam.vue"),
       },
       {
-        path: "grade-evaluation",
-        name: "GradeEvaluation",
-        component: () => import("../views/dashboard/GradeEvaluation.vue"),
-      },
-      {
         path: "data-analysis",
         name: "DataAnalysis",
         component: () => import("../views/dashboard/DataAnalysis.vue"),
+      },
+    ],
+  },
+  {
+    path: "/student",
+    name: "StudentDashboard",
+    component: () => import("../views/student/StudentDashboard.vue"),
+    meta: { requiresAuth: true, requiresStudent: true },
+    children: [
+      {
+        path: "",
+        redirect: "/student/exam-list",
+      },
+      {
+        path: "exam-list",
+        name: "ExamList",
+        component: () => import("../views/student/ExamList.vue"),
+      },
+      {
+        path: "history-exams",
+        name: "HistoryExams",
+        component: () => import("../views/student/HistoryExams.vue"),
       },
     ],
   },
@@ -66,15 +83,30 @@ const router = createRouter({
   routes,
 });
 
-// 简单的路由守卫，检查是否已登录
+// 路由守卫，检查是否已登录以及用户角色
 router.beforeEach((to, from, next) => {
   const isLoggedIn = localStorage.getItem("isLoggedIn");
+  const username = localStorage.getItem("username");
 
+  // 检查是否需要登录
   if (to.meta.requiresAuth && !isLoggedIn) {
     next("/login");
-  } else {
-    next();
+    return;
   }
+  
+  // 检查是否需要管理员权限
+  if (to.meta.requiresAdmin && username !== 'admin') {
+    next("/student");
+    return;
+  }
+
+  // 检查是否需要学生权限
+  if (to.meta.requiresStudent && username === 'admin') {
+    next("/dashboard");
+    return;
+  }
+  
+  next();
 });
 
 export default router;

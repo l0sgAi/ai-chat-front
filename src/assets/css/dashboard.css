@@ -65,6 +65,12 @@
     padding: 0 24px;
     height: 64px;
     background-color: #1f1f1f;
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 240px; /* 侧边栏宽度 */
+    z-index: 1000;
+    transition: left 0.3s ease;
 }
 
 .header-right {
@@ -85,6 +91,7 @@
 .dashboard-main {
     flex: 1;
     padding: 24px;
+    padding-top: 88px; /* 64px导航栏高度 + 24px间距 */
     overflow-y: auto;
     background-color: rgb(16, 16, 20);
 }
@@ -99,12 +106,18 @@
     width: 100%;
 }
 
+
+
 .welcome-content {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     height: 70vh;
+}
+
+.filter-margin{
+    margin: 15px;
 }
 
 /* 数据统计分析页面样式 */
@@ -122,4 +135,9 @@
 .chart-container {
     height: 300px;
     width: 100%;
+}
+
+/* 侧边栏收缩时的导航栏样式调整 */
+.dashboard-sider.n-layout-sider--collapsed + .dashboard-content .dashboard-header {
+    left: 64px; /* 收缩后的侧边栏宽度 */
 }

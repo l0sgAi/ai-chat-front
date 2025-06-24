@@ -3,7 +3,7 @@
         <n-card title="数据统计分析" class="data-analysis-card">
             <!-- 数据筛选 -->
             <n-space vertical>
-                <n-space>
+                <n-space class="filter-margin">
                     <n-select v-model:value="selectedExam" :options="examOptions" placeholder="选择考试"
                         style="width: 250px" />
                     <n-select v-model:value="selectedClass" :options="classOptions" placeholder="选择班级"
@@ -119,12 +119,12 @@
             <!-- 导出报告 -->
             <div style="margin-top: 20px; text-align: right;">
                 <n-space>
-                    <n-button @click="exportExcel">
+                    <!-- <n-button @click="exportExcel">
                         <template #icon>
                             <n-icon><document-text-outline /></n-icon>
                         </template>
                         导出Excel
-                    </n-button>
+                    </n-button> -->
                     <n-button type="primary" @click="generateReport">
                         <template #icon>
                             <n-icon><document-outline /></n-icon>
@@ -396,12 +396,15 @@ const initClassComparisonChart = () => {
             }
         },
         legend: {
-            data: ['本次考试', '上次考试']
+            data: ['本次考试', '上次考试'],
+            textStyle: {
+                color: '#fff'
+            }
         },
         grid: {
-            left: '3%',
-            right: '4%',
-            bottom: '3%',
+            left: '7%',
+            right: '8%',
+            bottom: '9%',
             containLabel: true
         },
         xAxis: {
@@ -454,7 +457,10 @@ const initQuestionTypeChart = () => {
         legend: {
             orient: 'vertical',
             left: 10,
-            data: ['单选题', '多选题', '判断题', '填空题', '简答题', '编程题', '案例分析']
+            data: ['单选题', '多选题', '判断题', '填空题', '简答题', '编程题', '案例分析'],
+            textStyle: {
+                color: '#fff'
+            }
         },
         series: [
             {
@@ -469,13 +475,15 @@ const initQuestionTypeChart = () => {
                 },
                 label: {
                     show: false,
-                    position: 'center'
+                    position: 'center',
+                    color: '#fff'
                 },
                 emphasis: {
                     label: {
                         show: true,
                         fontSize: '18',
-                        fontWeight: 'bold'
+                        fontWeight: 'bold',
+                        color: '#fff'
                     }
                 },
                 labelLine: {
@@ -511,7 +519,10 @@ const initTrendChart = () => {
             trigger: 'axis'
         },
         legend: {
-            data: ['平均分', '及格率', '优秀率']
+            data: ['平均分', '及格率', '优秀率'],
+            textStyle: {
+                color: '#fff'
+            }
         },
         grid: {
             left: '3%',

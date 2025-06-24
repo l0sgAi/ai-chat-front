@@ -42,7 +42,7 @@
 
                 <n-form-item class="dark-color-remember">
                     <n-checkbox v-model:checked="formData.rememberMe"></n-checkbox>
-                    记住我
+                    <div style="color:black;">记住我</div>
                 </n-form-item>
 
                 <n-button type="primary" block @click="login" style="margin-top: 12px">
@@ -139,11 +139,19 @@ const login = (e) => {
                         localStorage.setItem('tokenName', res.data.tokenName);
                         localStorage.setItem('tokenValue', res.data.tokenValue);
                         localStorage.setItem('isLoggedIn', 'true');
+                        // 保存用户名，用于后续判断用户角色
+                        localStorage.setItem('username', formData.username);
                         console.log('保存token信息完成:', res.data);
                     }
 
                     message.success('登录成功');
-                    router.push('/dashboard');
+
+                    // 根据用户名判断跳转到不同的仪表盘
+                    if (formData.username === 'admin') {
+                        router.push('/dashboard');
+                    } else {
+                        router.push('/student');
+                    }
                 })
             } catch (error) {
                 // 处理登录失败

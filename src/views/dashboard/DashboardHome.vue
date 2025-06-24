@@ -1,9 +1,9 @@
 <template>
     <div class="welcome-content">
         <n-result status="success" title="欢迎使用AI考试系统" description="请从左侧菜单选择功能">
-            <template #footer>
+            <!-- <template #footer>
                 <n-button type="primary" @click="goToUserInfo">开始使用</n-button>
-            </template>
+            </template> -->
         </n-result>
     </div>
 </template>

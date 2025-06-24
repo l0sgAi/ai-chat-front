@@ -12,16 +12,16 @@
 
             <!-- 试题筛选 -->
             <n-space vertical>
-                <n-space>
-                    <n-input v-model:value="searchKeyword" placeholder="搜索试题关键词" style="width: 200px">
+                <n-space class="filter-margin">
+                    <n-input v-model:value="searchKeyword" placeholder="搜索试题关键词">
                         <template #prefix>
                             <n-icon><search-outline /></n-icon>
                         </template>
                     </n-input>
-                    <n-select v-model:value="selectedType" :options="typeOptions" placeholder="试题类型"
+                    <!-- <n-select v-model:value="selectedType" :options="typeOptions" placeholder="试题类型"
                         style="width: 150px" />
                     <n-select v-model:value="selectedDifficulty" :options="difficultyOptions" placeholder="难度等级"
-                        style="width: 150px" />
+                        style="width: 150px" /> -->
                     <n-button @click="searchQuestions">搜索</n-button>
                     <n-button @click="resetSearch">重置</n-button>
                 </n-space>

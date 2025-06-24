@@ -11,56 +11,43 @@
             </template>
 
             <!-- 用户筛选 -->
-            <n-space vertical>
+            <n-space vertical class="filter-margin">
                 <n-space>
                     <n-input v-model:value="searchKeyword" placeholder="搜索用户名/学号" style="width: 200px">
                         <template #prefix>
                             <n-icon><search-outline /></n-icon>
                         </template>
                     </n-input>
-                    <n-select v-model:value="selectedRole" :options="roleOptions" placeholder="用户角色"
+                    <!-- <n-select v-model:value="selectedRole" :options="roleOptions" placeholder="用户角色"
                         style="width: 150px" />
                     <n-select v-model:value="selectedClass" :options="classOptions" placeholder="班级"
-                        style="width: 150px" />
+                        style="width: 150px" /> -->
                     <n-button @click="searchUsers">搜索</n-button>
                     <n-button @click="resetSearch">重置</n-button>
                 </n-space>
             </n-space>
 
             <!-- 用户列表 -->
-            <n-data-table :columns="columns" :data="filteredUsers" :pagination="pagination" :bordered="false" striped />
+            <n-data-table :columns="columns" :data="userData" :pagination="pagination" :bordered="false"
+                :loading="loading" striped />
 
             <!-- 添加用户模态框 -->
             <n-modal v-model:show="showAddUserModal" preset="card" title="添加用户" style="width: 600px">
                 <n-form ref="formRef" :model="formData" :rules="rules" label-placement="left" label-width="100">
-                    <n-form-item path="username" label="用户名">
-                        <n-input v-model:value="formData.username" placeholder="请输入用户名" />
+                    <n-form-item path="username" label="姓名">
+                        <n-input v-model:value="formData.username" placeholder="请输入姓名" />
                     </n-form-item>
-                    <n-form-item path="realName" label="姓名">
-                        <n-input v-model:value="formData.realName" placeholder="请输入姓名" />
+                    <n-form-item path="email" label="学号">
+                        <n-input v-model:value="formData.email" placeholder="请输入学号" />
                     </n-form-item>
-                    <n-form-item path="studentId" label="学号">
-                        <n-input v-model:value="formData.studentId" placeholder="请输入学号" />
+                    <n-form-item path="nickname" label="班级">
+                        <n-input v-model:value="formData.nickname" placeholder="请输入班级" />
                     </n-form-item>
-                    <n-form-item path="role" label="角色">
-                        <n-select v-model:value="formData.role" :options="roleOptions" />
+                    <n-form-item path="gender" label="性别">
+                        <n-select v-model:value="formData.gender" :options="genderOptions" />
                     </n-form-item>
-                    <n-form-item path="class" label="班级">
-                        <n-select v-model:value="formData.class" :options="classOptions" />
-                    </n-form-item>
-                    <n-form-item path="password" label="密码">
-                        <n-input v-model:value="formData.password" type="password" placeholder="请输入密码"
-                            show-password-on="click" />
-                    </n-form-item>
-                    <n-form-item path="confirmPassword" label="确认密码">
-                        <n-input v-model:value="formData.confirmPassword" type="password" placeholder="请再次输入密码"
-                            show-password-on="click" />
-                    </n-form-item>
-                    <n-form-item path="email" label="邮箱">
-                        <n-input v-model:value="formData.email" placeholder="请输入邮箱" />
-                    </n-form-item>
-                    <n-form-item path="phone" label="手机号">
-                        <n-input v-model:value="formData.phone" placeholder="请输入手机号" />
+                    <n-form-item path="birthdate" label="生日">
+                        <n-date-picker v-model:value="formData.birthdate" type="date" />
                     </n-form-item>
                 </n-form>
                 <template #footer>
@@ -74,26 +61,20 @@
             <!-- 编辑用户模态框 -->
             <n-modal v-model:show="showEditUserModal" preset="card" title="编辑用户" style="width: 600px">
                 <n-form ref="editFormRef" :model="editFormData" :rules="rules" label-placement="left" label-width="100">
-                    <n-form-item path="username" label="用户名">
-                        <n-input v-model:value="editFormData.username" placeholder="请输入用户名" />
+                    <n-form-item path="username" label="姓名">
+                        <n-input v-model:value="editFormData.username" placeholder="请输入姓名" />
                     </n-form-item>
-                    <n-form-item path="realName" label="姓名">
-                        <n-input v-model:value="editFormData.realName" placeholder="请输入姓名" />
+                    <n-form-item path="email" label="学号">
+                        <n-input v-model:value="editFormData.email" placeholder="请输入学号" />
                     </n-form-item>
-                    <n-form-item path="studentId" label="学号">
-                        <n-input v-model:value="editFormData.studentId" placeholder="请输入学号" />
+                    <n-form-item path="nickname" label="班级">
+                        <n-input v-model:value="editFormData.nickname" placeholder="请输入班级" />
                     </n-form-item>
-                    <n-form-item path="role" label="角色">
-                        <n-select v-model:value="editFormData.role" :options="roleOptions" />
+                    <n-form-item path="gender" label="性别">
+                        <n-select v-model:value="editFormData.gender" :options="genderOptions" />
                     </n-form-item>
-                    <n-form-item path="class" label="班级">
-                        <n-select v-model:value="editFormData.class" :options="classOptions" />
-                    </n-form-item>
-                    <n-form-item path="email" label="邮箱">
-                        <n-input v-model:value="editFormData.email" placeholder="请输入邮箱" />
-                    </n-form-item>
-                    <n-form-item path="phone" label="手机号">
-                        <n-input v-model:value="editFormData.phone" placeholder="请输入手机号" />
+                    <n-form-item path="birthdate" label="生日">
+                        <n-date-picker v-model:value="editFormData.birthdate" type="date" />
                     </n-form-item>
                 </n-form>
                 <template #footer>
@@ -108,8 +89,9 @@
 </template>
 
 <script setup>
-import { h, ref, reactive, computed } from 'vue';
+import { h, ref, reactive, onMounted } from 'vue';
 import { useMessage } from 'naive-ui';
+import { studentApi } from '../../api';
 import {
     NCard,
     NDataTable,
@@ -121,7 +103,8 @@ import {
     NInput,
     NSelect,
     NIcon,
-    NPopconfirm
+    NPopconfirm,
+    NDatePicker
 } from 'naive-ui';
 import {
     AddOutline,
@@ -132,49 +115,45 @@ import {
 
 const message = useMessage();
 
-// 角色选项
+// 角色选项 (0=学生，1=管理员)
 const roleOptions = [
-    { label: '学生', value: 'student' },
-    { label: '教师', value: 'teacher' },
-    { label: '管理员', value: 'admin' }
-];
-
-// 班级选项
-const classOptions = [
-    { label: '计算机科学与技术1班', value: 'cs1' },
-    { label: '计算机科学与技术2班', value: 'cs2' },
-    { label: '软件工程1班', value: 'se1' },
-    { label: '软件工程2班', value: 'se2' },
-    { label: '人工智能1班', value: 'ai1' },
-    { label: '人工智能2班', value: 'ai2' }
+    { label: '学生', value: 0 },
+    { label: '管理员', value: 1 }
 ];
 
 // 获取角色名称
 const getRoleName = (role) => {
     const option = roleOptions.find(item => item.value === role);
-    return option ? option.label : role;
+    return option ? option.label : '未知';
 };
 
-// 获取班级名称
-const getClassName = (className) => {
-    const option = classOptions.find(item => item.value === className);
-    return option ? option.label : className;
+// 性别选项 (0=未知，1=男，2=女)
+const genderOptions = [
+    { label: '未知', value: 0 },
+    { label: '男', value: 1 },
+    { label: '女', value: 2 }
+];
+
+// 获取性别名称
+const getGenderName = (gender) => {
+    const option = genderOptions.find(item => item.value === gender);
+    return option ? option.label : '未知';
 };
 
 // 表格列定义
 const createColumns = ({ edit, remove }) => {
     return [
         {
-            title: '用户名',
+            title: '姓名',
             key: 'username'
         },
         {
-            title: '姓名',
-            key: 'realName'
+            title: '学号',
+            key: 'email'
         },
         {
-            title: '学号',
-            key: 'studentId'
+            title: '班级',
+            key: 'nickname',
         },
         {
             title: '角色',
@@ -184,19 +163,15 @@ const createColumns = ({ edit, remove }) => {
             }
         },
         {
-            title: '班级',
-            key: 'class',
+            title: '性别',
+            key: 'gender',
             render(row) {
-                return getClassName(row.class);
+                return getGenderName(row.gender);
             }
         },
         {
-            title: '邮箱',
-            key: 'email'
-        },
-        {
-            title: '手机号',
-            key: 'phone'
+            title: '生日',
+            key: 'birthdate'
         },
         {
             title: '操作',
@@ -243,86 +218,55 @@ const createColumns = ({ edit, remove }) => {
     ];
 };
 
-// 模拟用户数据
-const userData = ref([
-    {
-        id: 1,
-        username: 'student1',
-        realName: '张三',
-        studentId: '2023001',
-        role: 'student',
-        class: 'cs1',
-        email: 'student1@example.com',
-        phone: '13800138001'
-    },
-    {
-        id: 2,
-        username: 'student2',
-        realName: '李四',
-        studentId: '2023002',
-        role: 'student',
-        class: 'cs2',
-        email: 'student2@example.com',
-        phone: '13800138002'
-    },
-    {
-        id: 3,
-        username: 'teacher1',
-        realName: '王老师',
-        studentId: 'T2023001',
-        role: 'teacher',
-        class: '',
-        email: 'teacher1@example.com',
-        phone: '13900139001'
-    },
-    {
-        id: 4,
-        username: 'admin',
-        realName: '管理员',
-        studentId: 'A2023001',
-        role: 'admin',
-        class: '',
-        email: 'admin@example.com',
-        phone: '13900139999'
+// 用户数据，从后端获取
+const userData = ref([]);
+const loading = ref(false);
+
+// 获取学生列表
+const fetchStudents = async () => {
+    try {
+        loading.value = true;
+        console.log('请求参数:', {
+            keyWord: searchKeyword.value,
+            pageNum: pagination.page,
+            pageSize: pagination.pageSize
+        });
+        const res = await studentApi.queryStudents(
+            searchKeyword.value,
+            pagination.page, // pageNum
+            pagination.pageSize // pageSize
+        );
+
+        if (res.code === 200) {
+            userData.value = res.data;
+            // 后端使用Result.page()返回，total字段在res中
+            pagination.itemCount = res.count || 0;
+            console.log('分页数据:', { data: res.data, total: res.count, currentPage: pagination.page });
+        } else {
+            message.error(res.message || '获取学生列表失败');
+        }
+    } catch (error) {
+        console.error('获取学生列表失败:', error);
+        message.error('获取学生列表失败: ' + (error.message || '未知错误'));
+    } finally {
+        loading.value = false;
     }
-]);
+};
+
+// 组件挂载时获取数据
+onMounted(() => {
+    fetchStudents();
+});
 
 // 搜索相关状态
 const searchKeyword = ref('');
 const selectedRole = ref(null);
 const selectedClass = ref(null);
 
-// 过滤后的用户列表
-const filteredUsers = computed(() => {
-    let result = [...userData.value];
-
-    // 关键词搜索
-    if (searchKeyword.value) {
-        const keyword = searchKeyword.value.toLowerCase();
-        result = result.filter(user =>
-            user.username.toLowerCase().includes(keyword) ||
-            user.realName.toLowerCase().includes(keyword) ||
-            user.studentId.toLowerCase().includes(keyword)
-        );
-    }
-
-    // 角色筛选
-    if (selectedRole.value) {
-        result = result.filter(user => user.role === selectedRole.value);
-    }
-
-    // 班级筛选
-    if (selectedClass.value) {
-        result = result.filter(user => user.class === selectedClass.value);
-    }
-
-    return result;
-});
-
 // 搜索用户
 const searchUsers = () => {
-    // 已通过计算属性实现
-    message.success('搜索完成');
+    pagination.page = 1; // 重置到第一页
+    fetchStudents();
 };
 
 // 重置搜索
@@ -330,25 +274,37 @@ const resetSearch = () => {
     searchKeyword.value = '';
     selectedRole.value = null;
     selectedClass.value = null;
+    pagination.page = 1; // 重置到第一页
+    fetchStudents();
 };
 
 // 分页配置
-const pagination = {
-    pageSize: 10
-};
+const pagination = reactive({
+    page: 1,
+    pageSize: 10,
+    itemCount: 0,
+    showSizePicker: true,
+    pageSizes: [10, 20, 50, 100],
+    onUpdatePage: (page) => {
+        pagination.page = page;
+        fetchStudents();
+    },
+    onUpdatePageSize: (pageSize) => {
+        pagination.pageSize = pageSize;
+        pagination.page = 1; // 重置到第一页
+        fetchStudents();
+    }
+});
 
 // 表单数据
 const formRef = ref(null);
 const formData = reactive({
     username: '',
-    realName: '',
-    studentId: '',
-    role: 'student',
-    class: '',
-    password: '',
-    confirmPassword: '',
+    role: 0,
+    nickname: '',
     email: '',
-    phone: ''
+    gender: 0,
+    birthdate: null
 });
 
 // 编辑表单数据
@@ -356,66 +312,33 @@ const editFormRef = ref(null);
 const editFormData = reactive({
     id: null,
     username: '',
-    realName: '',
-    studentId: '',
-    role: '',
-    class: '',
+    nickname: '',
     email: '',
-    phone: ''
+    gender: 0,
+    birthdate: null
 });
 
 // 表单验证规则
 const rules = {
     username: {
         required: true,
-        message: '请输入用户名',
-        trigger: 'blur'
-    },
-    realName: {
-        required: true,
         message: '请输入姓名',
         trigger: 'blur'
     },
-    studentId: {
+    email: {
         required: true,
         message: '请输入学号',
         trigger: 'blur'
     },
-    role: {
+    birthdate: {
         required: true,
-        message: '请选择角色',
+        validator: (rule, value) => {
+            if (value === null || value === undefined || value === '') {
+                return new Error('请选择生日');
+            }
+            return true;
+        },
         trigger: 'change'
-    },
-    password: {
-        required: true,
-        message: '请输入密码',
-        trigger: 'blur'
-    },
-    confirmPassword: {
-        required: true,
-        message: '请确认密码',
-        trigger: 'blur',
-        validator: (rule, value) => {
-            return value === formData.password ? true : new Error('两次输入的密码不一致');
-        }
-    },
-    email: {
-        required: true,
-        message: '请输入邮箱',
-        trigger: 'blur',
-        validator: (rule, value) => {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return emailRegex.test(value) ? true : new Error('请输入有效的邮箱地址');
-        }
-    },
-    phone: {
-        required: true,
-        message: '请输入手机号',
-        trigger: 'blur',
-        validator: (rule, value) => {
-            const phoneRegex = /^1[3-9]\d{9}$/;
-            return phoneRegex.test(value) ? true : new Error('请输入有效的手机号');
-        }
     }
 };
 
@@ -429,41 +352,73 @@ const columns = createColumns({
         showEditUserModal.value = true;
         Object.assign(editFormData, row);
     },
-    remove: (row) => {
-        userData.value = userData.value.filter(item => item.id !== row.id);
-        message.success('用户已删除');
+    remove: async (row) => {
+        try {
+            const res = await studentApi.deleteStudent(row.id);
+
+            if (res.code === 200) {
+                message.success(res.data || '用户已删除');
+                // 重新获取用户列表
+                fetchStudents();
+            } else {
+                message.error(res.message || '删除用户失败');
+            }
+        } catch (error) {
+            console.error('删除用户失败:', error);
+            message.error('删除用户失败: ' + (error.message || '未知错误'));
+        }
     }
 });
 
 // 添加用户
 const addUser = () => {
-    formRef.value?.validate((errors) => {
+    // 处理日期格式，确保birthdate是字符串格式
+    if (typeof formData.birthdate === 'number') {
+        // 如果是时间戳，转换为YYYY-MM-DD格式的字符串
+        const date = new Date(formData.birthdate);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        formData.birthdate = `${year}-${month}-${day}`;
+    }
+    console.log('新增用户:', formData);
+    formRef.value?.validate(async (errors) => {
         if (!errors) {
-            const newUser = {
-                id: Date.now(),
-                username: formData.username,
-                realName: formData.realName,
-                studentId: formData.studentId,
-                role: formData.role,
-                class: formData.class,
-                email: formData.email,
-                phone: formData.phone
-            };
+            try {
+                const newUser = {
+                    username: formData.username,
+                    role: formData.role,
+                    nickname: formData.nickname,
+                    email: formData.email,
+                    gender: formData.gender,
+                    birthdate: formData.birthdate
+                };
 
-            userData.value.push(newUser);
-            message.success('用户添加成功');
-            showAddUserModal.value = false;
+                const res = await studentApi.addStudent(newUser);
 
-            // 重置表单
-            formData.username = '';
-            formData.realName = '';
-            formData.studentId = '';
-            formData.role = 'student';
-            formData.class = '';
-            formData.password = '';
-            formData.confirmPassword = '';
-            formData.email = '';
-            formData.phone = '';
+                if (res.code === 200) {
+                    message.success(res.data || '用户添加成功');
+                    showAddUserModal.value = false;
+
+                    // 重新获取用户列表
+                    fetchStudents();
+
+                    // 重置表单
+                    formData.username = '';
+                    formData.role = 0;
+                    formData.nickname = '';
+                    formData.password = '';
+                    formData.confirmPassword = '';
+                    formData.email = '';
+                    formData.gender = 0;
+                    formData.birthdate = null;
+                } else {
+                    message.error(res.message || '用户添加失败');
+                }
+            } catch (error) {
+                console.error('添加用户失败:', error);
+                message.error('添加用户失败: ' + (error.message || '未知错误'));
+            }
         } else {
             message.error('请完善表单信息');
         }
@@ -472,13 +427,43 @@ const addUser = () => {
 
 // 更新用户
 const updateUser = () => {
-    editFormRef.value?.validate((errors) => {
+    console.log('更新用户:', editFormData);
+    // 处理日期格式，确保birthdate是字符串格式
+    if (typeof editFormData.birthdate === 'number') {
+        // 如果是时间戳，转换为YYYY-MM-DD格式的字符串
+        const date = new Date(editFormData.birthdate);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        editFormData.birthdate = `${year}-${month}-${day}`;
+    }
+
+    editFormRef.value?.validate(async (errors) => {
         if (!errors) {
-            const index = userData.value.findIndex(item => item.id === editFormData.id);
-            if (index !== -1) {
-                userData.value[index] = { ...editFormData };
-                message.success('用户信息更新成功');
-                showEditUserModal.value = false;
+            try {
+                const updatedUser = {
+                    id: editFormData.id,
+                    username: editFormData.username,
+                    nickname: editFormData.nickname,
+                    email: editFormData.email,
+                    gender: editFormData.gender,
+                    birthdate: editFormData.birthdate
+                };
+
+                const res = await studentApi.updateStudent(updatedUser);
+
+                if (res.code === 200) {
+                    message.success(res.data || '用户信息更新成功');
+                    showEditUserModal.value = false;
+
+                    // 重新获取用户列表
+                    fetchStudents();
+                } else {
+                    message.error(res.message || '用户信息更新失败');
+                }
+            } catch (error) {
+                console.error('更新用户失败:', error);
+                message.error('更新用户失败: ' + (error.message || '未知错误'));
             }
         } else {
             message.error('请完善表单信息');
