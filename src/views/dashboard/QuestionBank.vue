@@ -2,7 +2,7 @@
     <div class="question-bank-container">
         <n-card title="试题库管理" class="question-bank-card">
             <template #header-extra>
-                <n-button type="primary" @click="showAddQuestionModal = true">
+                <n-button type="primary" @click="openAddQuestionModal">
                     <template #icon>
                         <n-icon><add-outline /></n-icon>
                     </template>
@@ -28,8 +28,8 @@
             </n-space>
 
             <!-- 试题列表 -->
-            <n-data-table :columns="columns" :data="filteredQuestions" :pagination="pagination" :bordered="false"
-                striped />
+            <n-data-table :columns="columns" :data="questionData" :pagination="pagination" :loading="loading"
+                :bordered="false" striped />
 
             <!-- 添加试题模态框 -->
             <n-modal v-model:show="showAddQuestionModal" preset="card" title="添加试题" style="width: 600px">
@@ -40,53 +40,31 @@
                     <n-form-item path="type" label="试题类型">
                         <n-select v-model:value="formData.type" :options="typeOptions" />
                     </n-form-item>
-                    <n-form-item path="difficulty" label="难度等级">
-                        <n-select v-model:value="formData.difficulty" :options="difficultyOptions" />
+                    <n-form-item path="level" label="难度等级">
+                        <n-select v-model:value="formData.level" :options="difficultyOptions" />
                     </n-form-item>
                     <n-form-item path="content" label="试题内容">
                         <n-input v-model:value="formData.content" type="textarea" placeholder="请输入试题内容"
                             :autosize="{ minRows: 3, maxRows: 6 }" />
                     </n-form-item>
 
-                    <!-- 选择题选项 -->
-                    <template v-if="formData.type === 'single' || formData.type === 'multiple'">
-                        <n-form-item path="options" label="选项">
-                            <n-dynamic-input v-model:value="formData.options" preset="pair" key-placeholder="选项"
-                                value-placeholder="内容" :min="2" :max="6" />
-                        </n-form-item>
-                        <n-form-item path="answer" label="正确答案">
-                            <n-select v-if="formData.type === 'single'" v-model:value="formData.answer"
-                                :options="formData.options.map(item => ({ label: item.key, value: item.key }))"
-                                placeholder="请选择正确答案" />
-                            <n-select v-else v-model:value="formData.answer" multiple
-                                :options="formData.options.map(item => ({ label: item.key, value: item.key }))"
-                                placeholder="请选择正确答案" />
-                        </n-form-item>
-                    </template>
-
-                    <!-- 判断题答案 -->
-                    <n-form-item v-if="formData.type === 'truefalse'" path="answer" label="正确答案">
-                        <n-radio-group v-model:value="formData.answer">
-                            <n-space>
-                                <n-radio value="true">正确</n-radio>
-                                <n-radio value="false">错误</n-radio>
-                            </n-space>
-                        </n-radio-group>
+                    <!-- 正确答案选项 (选择题和判断题) -->
+                    <n-form-item v-if="formData.type === 0 || formData.type === 1" path="answerOption" label="正确答案">
+                        <n-select v-if="formData.type === 0" v-model:value="formData.answerOption"
+                            :options="[{ label: 'A', value: 0 }, { label: 'B', value: 1 }, { label: 'C', value: 2 }, { label: 'D', value: 3 }]"
+                            placeholder="请选择正确答案选项" />
+                        <n-select v-else v-model:value="formData.answerOption"
+                            :options="[{ label: '正确', value: 0 }, { label: '错误', value: 1 }]" placeholder="请选择正确答案" />
                     </n-form-item>
 
-                    <!-- 填空题答案 -->
-                    <n-form-item v-if="formData.type === 'fillblank'" path="answer" label="正确答案">
-                        <n-input v-model:value="formData.answer" placeholder="请输入正确答案，多个答案用逗号分隔" />
-                    </n-form-item>
-
-                    <!-- 简答题答案 -->
-                    <n-form-item v-if="formData.type === 'shortanswer'" path="answer" label="参考答案">
-                        <n-input v-model:value="formData.answer" type="textarea" placeholder="请输入参考答案"
+                    <!-- 正确答案文本 (仅简答题) -->
+                    <n-form-item v-if="formData.type === 2" path="answer" label="正确答案">
+                        <n-input v-model:value="formData.answer" type="textarea" placeholder="请输入正确答案"
                             :autosize="{ minRows: 2, maxRows: 4 }" />
                     </n-form-item>
 
-                    <n-form-item path="analysis" label="解析">
-                        <n-input v-model:value="formData.analysis" type="textarea" placeholder="请输入试题解析"
+                    <n-form-item path="explanation" label="解析">
+                        <n-input v-model:value="formData.explanation" type="textarea" placeholder="请输入试题解析"
                             :autosize="{ minRows: 2, maxRows: 4 }" />
                     </n-form-item>
                 </n-form>
@@ -109,38 +87,26 @@
                             {{ getQuestionTypeName(currentQuestion.type) }}
                         </n-descriptions-item>
                         <n-descriptions-item label="难度等级">
-                            {{ getDifficultyName(currentQuestion.difficulty) }}
+                            {{ getDifficultyName(currentQuestion.level) }}
                         </n-descriptions-item>
                         <n-descriptions-item label="试题内容" span="3">
                             {{ currentQuestion.content }}
                         </n-descriptions-item>
 
-                        <!-- 选择题选项 -->
-                        <template v-if="currentQuestion.type === 'single' || currentQuestion.type === 'multiple'">
-                            <n-descriptions-item label="选项" span="3">
-                                <n-space vertical>
-                                    <div v-for="option in currentQuestion.options" :key="option.key">
-                                        {{ option.key }}: {{ option.value }}
-                                    </div>
-                                </n-space>
-                            </n-descriptions-item>
-                        </template>
-
                         <n-descriptions-item label="正确答案" span="3">
-                            <template v-if="currentQuestion.type === 'single' || currentQuestion.type === 'multiple'">
-                                {{ Array.isArray(currentQuestion.answer) ? currentQuestion.answer.join(', ') :
-                    currentQuestion.answer }}
+                            <template v-if="currentQuestion.type === 0">
+                                {{ String.fromCharCode(65 + currentQuestion.answerOption) }}
                             </template>
-                            <template v-else-if="currentQuestion.type === 'truefalse'">
-                                {{ currentQuestion.answer === 'true' ? '正确' : '错误' }}
+                            <template v-else-if="currentQuestion.type === 1">
+                                {{ currentQuestion.answerOption === 0 ? '正确' : '错误' }}
                             </template>
-                            <template v-else>
+                            <template v-else-if="currentQuestion.type === 2">
                                 {{ currentQuestion.answer }}
                             </template>
                         </n-descriptions-item>
 
                         <n-descriptions-item label="解析" span="3">
-                            {{ currentQuestion.analysis }}
+                            {{ currentQuestion.explanation }}
                         </n-descriptions-item>
                     </n-descriptions>
                 </template>
@@ -150,8 +116,9 @@
 </template>
 
 <script setup>
-import { h, ref, reactive, computed } from 'vue';
+import { h, ref, reactive, onMounted } from 'vue';
 import { useMessage } from 'naive-ui';
+import { questionBankApi } from '../../api';
 import {
     NCard,
     NDataTable,
@@ -180,32 +147,30 @@ import {
 
 const message = useMessage();
 
-// 试题类型选项
+// 试题类型选项 (选择题0,判断题1,简答题2)
 const typeOptions = [
-    { label: '单选题', value: 'single' },
-    { label: '多选题', value: 'multiple' },
-    { label: '判断题', value: 'truefalse' },
-    { label: '填空题', value: 'fillblank' },
-    { label: '简答题', value: 'shortanswer' }
+    { label: '选择题', value: 0 },
+    { label: '判断题', value: 1 },
+    { label: '简答题', value: 2 }
 ];
 
-// 难度等级选项
+// 难度等级选项 (易0、中等1、难2)
 const difficultyOptions = [
-    { label: '简单', value: 'easy' },
-    { label: '中等', value: 'medium' },
-    { label: '困难', value: 'hard' }
+    { label: '简单', value: 0 },
+    { label: '中等', value: 1 },
+    { label: '困难', value: 2 }
 ];
 
 // 获取试题类型名称
 const getQuestionTypeName = (type) => {
     const option = typeOptions.find(item => item.value === type);
-    return option ? option.label : type;
+    return option ? option.label : '未知';
 };
 
 // 获取难度等级名称
-const getDifficultyName = (difficulty) => {
-    const option = difficultyOptions.find(item => item.value === difficulty);
-    return option ? option.label : difficulty;
+const getDifficultyName = (level) => {
+    const option = difficultyOptions.find(item => item.value === level);
+    return option ? option.label : '未知';
 };
 
 // 表格列定义
@@ -227,9 +192,9 @@ const createColumns = ({ view, edit, remove }) => {
         },
         {
             title: '难度等级',
-            key: 'difficulty',
+            key: 'level',
             render(row) {
-                return getDifficultyName(row.difficulty);
+                return getDifficultyName(row.level);
             }
         },
         {
@@ -288,80 +253,47 @@ const createColumns = ({ view, edit, remove }) => {
     ];
 };
 
-// 模拟试题数据
-const questionData = ref([
-    {
-        id: 1,
-        title: '什么是人工智能？',
-        type: 'shortanswer',
-        difficulty: 'medium',
-        content: '请简要描述人工智能的定义及其主要应用领域。',
-        answer: '人工智能是研究、开发用于模拟、延伸和扩展人的智能的理论、方法、技术及应用系统的一门新的技术科学。主要应用于自然语言处理、机器视觉、专家系统、机器人等领域。',
-        analysis: '人工智能是计算机科学的一个分支，它企图了解智能的实质，并生产出一种新的能以人类智能相似的方式做出反应的智能机器。',
-        options: []
-    },
-    {
-        id: 2,
-        title: '以下哪项不是机器学习的主要类型？',
-        type: 'single',
-        difficulty: 'easy',
-        content: '请选择一项不属于机器学习主要类型的选项。',
-        options: [
-            { key: 'A', value: '监督学习' },
-            { key: 'B', value: '无监督学习' },
-            { key: 'C', value: '强化学习' },
-            { key: 'D', value: '量子学习' }
-        ],
-        answer: 'D',
-        analysis: '机器学习的主要类型包括监督学习、无监督学习和强化学习。量子学习不是机器学习的主要类型。'
-    },
-    {
-        id: 3,
-        title: '深度学习是机器学习的一个子集',
-        type: 'truefalse',
-        difficulty: 'easy',
-        content: '判断：深度学习是机器学习的一个子集。',
-        answer: 'true',
-        analysis: '深度学习是机器学习的一个子集，它使用多层神经网络来提取高级特征。',
-        options: []
-    }
-]);
+// 试题数据，从后端获取
+const questionData = ref([]);
+const loading = ref(false);
 
 // 搜索相关状态
 const searchKeyword = ref('');
 const selectedType = ref(null);
 const selectedDifficulty = ref(null);
 
-// 过滤后的试题列表
-const filteredQuestions = computed(() => {
-    let result = [...questionData.value];
+// 获取试题列表
+const fetchQuestions = async (forceRefresh = false) => {
+    try {
+        loading.value = true;
 
-    // 关键词搜索
-    if (searchKeyword.value) {
-        const keyword = searchKeyword.value.toLowerCase();
-        result = result.filter(q =>
-            q.title.toLowerCase().includes(keyword) ||
-            q.content.toLowerCase().includes(keyword)
+        const res = await questionBankApi.queryQuestions(
+            searchKeyword.value,
+            pagination.page,
+            pagination.pageSize
         );
-    }
 
-    // 类型筛选
-    if (selectedType.value) {
-        result = result.filter(q => q.type === selectedType.value);
+        if (res.code === 200) {
+            questionData.value = res.data;
+            pagination.itemCount = res.count || 0;
+            console.log('分页数据:', { data: res.data, total: res.count, page: pagination.page });
+        } else {
+            message.error(res.message || '获取试题列表失败');
+        }
+    } catch (error) {
+        console.error('获取试题列表失败:', error);
+        message.error('获取试题列表失败: ' + (error.message || '未知错误'));
+    } finally {
+        loading.value = false;
     }
+};
 
-    // 难度筛选
-    if (selectedDifficulty.value) {
-        result = result.filter(q => q.difficulty === selectedDifficulty.value);
-    }
 
-    return result;
-});
 
 // 搜索试题
 const searchQuestions = () => {
-    // 已通过计算属性实现
-    message.success('搜索完成');
+    pagination.page = 1; // 重置到第一页
+    fetchQuestions();
 };
 
 // 重置搜索
@@ -369,7 +301,14 @@ const resetSearch = () => {
     searchKeyword.value = '';
     selectedType.value = null;
     selectedDifficulty.value = null;
+    pagination.page = 1; // 重置到第一页
+    fetchQuestions();
 };
+
+// 组件挂载时获取数据
+onMounted(() => {
+    fetchQuestions();
+});
 
 // 查看试题详情
 const viewQuestionDetail = (question) => {
@@ -377,29 +316,56 @@ const viewQuestionDetail = (question) => {
     showQuestionDetailModal.value = true;
 };
 
+// 重置表单数据
+const resetFormData = () => {
+    formData.title = '';
+    formData.type = 0;
+    formData.level = 1;
+    formData.content = '';
+    formData.answer = '';
+    formData.answerOption = null;
+    formData.explanation = '';
+    currentEditId.value = null;
+};
+
+// 打开添加试题模态框
+const openAddQuestionModal = () => {
+    resetFormData();
+    showAddQuestionModal.value = true;
+};
+
 // 编辑试题
 const editQuestion = (question) => {
-    // 复制问题数据到表单
+    // 先重置表单，确保没有残留数据
+    resetFormData();
+
+    currentEditId.value = question.id;
     formData.title = question.title;
     formData.type = question.type;
-    formData.difficulty = question.difficulty;
+    formData.level = question.level;
     formData.content = question.content;
-    formData.options = [...question.options];
     formData.answer = question.answer;
-    formData.analysis = question.analysis;
-
-    // 显示编辑模态框
+    formData.answerOption = question.answerOption !== null ? Number(question.answerOption) : null;
+    formData.explanation = question.explanation;
     showAddQuestionModal.value = true;
-    // 设置当前编辑的问题ID
-    currentEditId.value = question.id;
+
+    console.log("当前数据：", question.answerOption);
 };
 
 // 删除试题
-const removeQuestion = (question) => {
-    const index = questionData.value.findIndex(q => q.id === question.id);
-    if (index !== -1) {
-        questionData.value.splice(index, 1);
-        message.success('删除成功');
+const removeQuestion = async (question) => {
+    try {
+        const res = await questionBankApi.deleteQuestion(question.id);
+        if (res.code === 200) {
+            message.success(res.data || '删除成功');
+            // 重新获取数据
+            fetchQuestions();
+        } else {
+            message.error(res.message || '删除失败');
+        }
+    } catch (error) {
+        console.error('删除失败:', error);
+        message.error('删除失败: ' + (error.message || '未知错误'));
     }
 };
 
@@ -411,9 +377,22 @@ const columns = createColumns({
 });
 
 // 分页配置
-const pagination = {
-    pageSize: 10
-};
+const pagination = reactive({
+    page: 1,
+    pageSize: 10,
+    itemCount: 0,
+    showSizePicker: true,
+    pageSizes: [10, 20, 50, 100],
+    onUpdatePage: (page) => {
+        pagination.page = page;
+        fetchQuestions();
+    },
+    onUpdatePageSize: (pageSize) => {
+        pagination.pageSize = pageSize;
+        pagination.page = 1; // 重置到第一页
+        fetchQuestions();
+    }
+});
 
 // 添加试题模态框显示状态
 const showAddQuestionModal = ref(false);
@@ -427,17 +406,12 @@ const currentEditId = ref(null);
 // 表单数据
 const formData = reactive({
     title: '',
-    type: 'single',
-    difficulty: 'medium',
+    type: 0, // 选择题0,判断题1,简答题2
+    level: 1, // 易0、中等1、难2
     content: '',
-    options: [
-        { key: 'A', value: '' },
-        { key: 'B', value: '' },
-        { key: 'C', value: '' },
-        { key: 'D', value: '' }
-    ],
-    answer: '',
-    analysis: ''
+    answer: '', // 正确答案-文本
+    answerOption: null, // 正确答案-选项 abcd对应0123 正确/错误 对应 0/1
+    explanation: '' // 试题解析说明
 });
 
 // 表单验证规则
@@ -456,6 +430,16 @@ const rules = {
         required: true,
         message: '请输入正确答案',
         trigger: 'blur'
+    },
+    answerOption: {
+        required: true,
+        validator: (rule, value) => {
+            if (value === null || value === undefined || value === '') {
+                return new Error('请选择答案选项');
+            }
+            return true;
+        },
+        trigger: 'change'
     }
 };
 
@@ -464,41 +448,61 @@ const formRef = ref(null);
 
 // 添加试题
 const addQuestion = () => {
-    formRef.value?.validate((errors) => {
+    formRef.value?.validate(async (errors) => {
         if (!errors) {
-            const newQuestion = {
-                ...formData,
-                id: currentEditId.value || Date.now()
-            };
+            try {
+                const questionData = {
+                    title: formData.title,
+                    type: formData.type,
+                    level: formData.level,
+                    content: formData.content,
+                    explanation: formData.explanation
+                };
 
-            if (currentEditId.value) {
-                // 编辑现有试题
-                const index = questionData.value.findIndex(q => q.id === currentEditId.value);
-                if (index !== -1) {
-                    questionData.value[index] = newQuestion;
-                    message.success('更新成功');
+                // 根据试题类型添加对应的答案字段
+                if (formData.type === 0 || formData.type === 1) {
+                    // 选择题和判断题使用answerOption
+                    questionData.answerOption = formData.answerOption;
+                } else if (formData.type === 2) {
+                    // 简答题使用answer
+                    questionData.answer = formData.answer;
                 }
-                currentEditId.value = null;
-            } else {
-                // 添加新试题
-                questionData.value.push(newQuestion);
-                message.success('添加成功');
+
+                let res;
+                if (currentEditId.value) {
+                    // 编辑现有试题
+                    questionData.id = currentEditId.value;
+                    res = await questionBankApi.updateQuestion(questionData);
+                    if (res.code === 200) {
+                        message.success(res.data || '更新成功');
+                    } else {
+                        message.error(res.message || '更新失败');
+                        return;
+                    }
+                    currentEditId.value = null;
+                } else {
+                    // 添加新试题
+                    res = await questionBankApi.addQuestion(questionData);
+                    if (res.code === 200) {
+                        message.success(res.data || '添加成功');
+                    } else {
+                        message.error(res.message || '添加失败');
+                        return;
+                    }
+                }
+
+                // 重新获取数据
+                fetchQuestions();
+
+                // 重置表单
+                resetFormData();
+
+                // 关闭模态框
+                showAddQuestionModal.value = false;
+            } catch (error) {
+                console.error('操作失败:', error);
+                message.error('操作失败: ' + (error.message || '未知错误'));
             }
-
-            // 重置表单
-            formData.title = '';
-            formData.content = '';
-            formData.options = [
-                { key: 'A', value: '' },
-                { key: 'B', value: '' },
-                { key: 'C', value: '' },
-                { key: 'D', value: '' }
-            ];
-            formData.answer = '';
-            formData.analysis = '';
-
-            // 关闭模态框
-            showAddQuestionModal.value = false;
         } else {
             message.error('请完善表单信息');
         }

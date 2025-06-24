@@ -78,10 +78,52 @@ export const studentApi = {
   deleteStudent: (id) => put(`${BASE_URL}/exam/student/delete`, null, { params: { id } }),
 };
 
+/**
+ * 题库相关API
+ */
+export const questionBankApi = {
+  // 添加题目
+  addQuestion: (data) => post(`${BASE_URL}/exam/questionBank/add`, data),
+  
+  // 查询题目列表
+  queryQuestions: (keyWord, pageNum = 1, pageSize = 10) => 
+    get(`${BASE_URL}/exam/questionBank/query`, { keyWord, pageNum, pageSize }),
+  
+  // 更新题目信息
+  updateQuestion: (data) => put(`${BASE_URL}/exam/questionBank/update`, data),
+  
+  // 删除题目
+  deleteQuestion: (id) => put(`${BASE_URL}/exam/questionBank/delete`, null, { params: { id } }),
+};
+
+/**
+ * 考试相关API
+ */
+export const examApi = {
+  // 添加考试
+  addExam: (data) => post(`${BASE_URL}/exam/tests/add`, data),
+  
+  // 查询考试列表
+  queryExams: (keyWord, status, pageNum = 1, pageSize = 10) => {
+    const params = { pageNum, pageSize };
+    if (keyWord) params.keyWord = keyWord;
+    if (status !== null && status !== undefined) params.status = status;
+    return get(`${BASE_URL}/exam/tests/query`, params);
+  },
+  
+  // 更新考试信息
+  updateExam: (data) => put(`${BASE_URL}/exam/tests/update`, data),
+  
+  // 删除考试
+  deleteExam: (id) => put(`${BASE_URL}/exam/tests/delete`, null, { params: { id } }),
+};
+
 // 导出所有API
 export default {
   userApi,
   chatApi,
   systemApi,
   studentApi,
+  questionBankApi,
+  examApi,
 };
