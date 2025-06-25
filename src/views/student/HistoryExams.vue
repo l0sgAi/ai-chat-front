@@ -17,103 +17,143 @@
             </n-space>
 
             <!-- 历史考试列表 -->
-            <n-data-table :columns="columns" :data="filteredExams" :pagination="pagination" :bordered="false" striped />
+            <n-spin :show="loading">
+                <n-data-table :columns="columns" :data="filteredExams" :pagination="pagination" :bordered="false"
+                    striped />
+            </n-spin>
 
             <!-- 考试详情模态框 -->
-            <n-modal v-model:show="showExamDetailModal" preset="card" title="考试详情" style="width: 700px">
-                <template v-if="selectedExam">
-                    <n-space vertical size="large">
-                        <!-- 基本信息 -->
-                        <n-descriptions bordered>
-                            <n-descriptions-item label="考试名称">
-                                {{ selectedExam.title }}
-                            </n-descriptions-item>
-                            <n-descriptions-item label="考试时间">
-                                {{ formatDate(selectedExam.examTime) }}
-                            </n-descriptions-item>
-                            <n-descriptions-item label="考试用时">
-                                {{ selectedExam.usedTime }} 分钟
-                            </n-descriptions-item>
-                            <n-descriptions-item label="总分">
-                                {{ selectedExam.score }} / {{ selectedExam.totalScore }} 分
-                            </n-descriptions-item>
-                            <n-descriptions-item label="状态">
-                                <n-tag :type="selectedExam.score >= 60 ? 'success' : 'error'">
-                                    {{ selectedExam.score >= 60 ? '通过' : '未通过' }}
-                                </n-tag>
-                            </n-descriptions-item>
-                        </n-descriptions>
+            <n-modal v-model:show="showExamDetailModal" preset="card" title="考试详情" style="width: 800px">
+                <n-spin :show="loadingDetail">
+                    <template v-if="selectedExam">
+                        <n-space vertical size="large">
+                            <!-- 基本信息 -->
+                            <n-descriptions bordered>
+                                <n-descriptions-item label="考试名称">
+                                    {{ selectedExam.name || selectedExam.title }}
+                                </n-descriptions-item>
+                                <n-descriptions-item label="考试时间">
+                                    {{ formatDate(selectedExam.startTime || selectedExam.examTime) }}
+                                </n-descriptions-item>
+                                <n-descriptions-item label="考试用时">
+                                    {{ Math.round((selectedExam.timeUsed || 0) / 60) }} 分钟
+                                </n-descriptions-item>
+                                <n-descriptions-item label="总分">
+                                    {{ selectedExam.score }} / {{ selectedExam.totalScore || 100 }} 分
+                                </n-descriptions-item>
+                                <n-descriptions-item label="状态">
+                                    <n-tag :type="selectedExam.score >= 60 ? 'success' : 'error'">
+                                        {{ selectedExam.score >= 60 ? '通过' : '未通过' }}
+                                    </n-tag>
+                                </n-descriptions-item>
+                            </n-descriptions>
 
-                        <!-- 成绩分析 -->
-                        <div class="score-analysis">
-                            <h3>成绩分析</h3>
-                            <n-card>
-                                <n-grid :cols="3" :x-gap="12">
-                                    <n-gi>
-                                        <n-statistic label="正确率">
-                                            {{ Math.round(selectedExam.correctRate * 100) }}%
-                                        </n-statistic>
-                                    </n-gi>
-                                    <n-gi>
-                                        <n-statistic label="排名">
-                                            {{ selectedExam.rank }} / {{ selectedExam.totalStudents }}
-                                        </n-statistic>
-                                    </n-gi>
-                                    <n-gi>
-                                        <n-statistic label="用时百分比">
-                                            {{ Math.round(selectedExam.usedTime / selectedExam.duration * 100) }}%
-                                        </n-statistic>
-                                    </n-gi>
-                                </n-grid>
-                            </n-card>
-                        </div>
+                            <!-- 成绩分析 -->
+                            <div class="score-analysis">
+                                <h3>成绩分析</h3>
+                                <n-card>
+                                    <n-grid :cols="3" :x-gap="12">
+                                        <n-gi>
+                                            <n-statistic label="正确率">
+                                                {{ Math.round((selectedExam.score || 0) / (selectedExam.totalScore ||
+                                                    100) * 100) }}%
+                                            </n-statistic>
+                                        </n-gi>
+                                        <n-gi>
+                                            <n-statistic label="排名">
+                                                {{ selectedExam.rank || '-' }} / {{ selectedExam.totalStudents || '-' }}
+                                            </n-statistic>
+                                        </n-gi>
+                                        <n-gi>
+                                            <n-statistic label="用时百分比">
+                                                {{ Math.round((selectedExam.timeUsed || 0) /
+                                                    (selectedExam.durationMinutes || 1) * 100) }}%
+                                            </n-statistic>
+                                        </n-gi>
+                                    </n-grid>
+                                </n-card>
+                            </div>
 
-                        <!-- 题型分析 -->
-                        <div class="question-type-analysis">
-                            <h3>题型分析</h3>
-                            <n-card>
-                                <n-data-table :columns="questionTypeColumns" :data="selectedExam.questionTypeAnalysis"
-                                    :bordered="false" :pagination="false" />
-                            </n-card>
-                        </div>
+                            <!-- 题型分析 -->
+                            <div class="question-type-analysis">
+                                <h3>题型分析</h3>
+                                <n-card>
+                                    <n-data-table :columns="questionTypeColumns" :data="computedQuestionTypeAnalysis"
+                                        :bordered="false" :pagination="false" />
+                                </n-card>
+                            </div>
 
-                        <!-- 错题分析 -->
-                        <div class="wrong-questions" v-if="selectedExam.wrongQuestions.length > 0">
-                            <h3>错题分析</h3>
-                            <n-collapse>
-                                <n-collapse-item v-for="(question, index) in selectedExam.wrongQuestions" :key="index"
-                                    :title="`第${question.index}题: [${getQuestionTypeName(question.type)}] ${question.content.substring(0, 30)}...`">
-                                    <n-space vertical>
-                                        <div class="question-content">
-                                            {{ question.content }}
-                                        </div>
-
-                                        <n-divider />
-
-                                        <div class="answer-analysis">
+                            <!-- 题目详情 -->
+                            <div class="question-details"
+                                v-if="computedAllQuestions && computedAllQuestions.length > 0">
+                                <h3>题目详情</h3>
+                                <n-card>
+                                    <n-collapse>
+                                        <n-collapse-item v-for="(question, index) in computedAllQuestions"
+                                            :key="question.id || index"
+                                            :title="`第${question.index}题: [${getQuestionTypeName(question.type)}] ${(question.title || question.content || '').substring(0, 50)}...`">
                                             <n-space vertical>
-                                                <div>
-                                                    <strong>您的答案:</strong>
-                                                    <span class="wrong-answer">{{ formatAnswer(question.userAnswer,
-                                                        question.type) }}</span>
+                                                <div class="question-content">
+                                                    <strong>题目:</strong> {{ question.content }}
                                                 </div>
-                                                <div>
-                                                    <strong>正确答案:</strong>
-                                                    <span class="correct-answer">{{ formatAnswer(question.correctAnswer,
-                                                        question.type) }}</span>
+
+                                                <!-- 选择题选项 -->
+                                                <div v-if="(question.type === 0 || question.questionType === 0 || question.qType === 0) && question.options && Array.isArray(question.options)"
+                                                    class="question-options">
+                                                    <strong>选项:</strong>
+                                                    <div v-for="(option, optionIndex) in question.options"
+                                                        :key="optionIndex" class="option-item">
+                                                        {{ ['A', 'B', 'C', 'D'][optionIndex] }}. {{ option }}
+                                                    </div>
                                                 </div>
-                                                <div v-if="question.analysis">
-                                                    <strong>解析:</strong>
-                                                    <p>{{ question.analysis }}</p>
+
+                                                <n-divider />
+
+                                                <div class="answer-details">
+                                                    <n-space vertical>
+                                                        <div>
+                                                            <strong>您的答案:</strong>
+                                                            <span :class="{
+                                                                'correct-answer': question.isCorrect,
+                                                                'wrong-answer': !question.isCorrect
+                                                            }">
+                                                                {{ formatAnswer(question.type, question, true) }}
+                                                            </span>
+                                                        </div>
+                                                        <div>
+                                                            <strong>正确答案:</strong>
+                                                            <span class="correct-answer">
+                                                                {{ formatAnswer(question.type, question, false) }}
+                                                            </span>
+                                                        </div>
+                                                        <div v-if="question.explanation">
+                                                            <strong>解析:</strong>
+                                                            <p>{{ question.explanation }}</p>
+                                                        </div>
+                                                        <div>
+                                                            <strong>答题状态:</strong>
+                                                            <n-tag :type="question.isCorrect ? 'success' : 'error'">
+                                                                {{ question.isCorrect ? '正确' : '错误' }}
+                                                            </n-tag>
+                                                        </div>
+                                                        <div v-if="question.level !== undefined">
+                                                            <strong>难度等级:</strong>
+                                                            <n-tag
+                                                                :type="question.level === 0 ? 'success' : question.level === 1 ? 'warning' : 'error'">
+                                                                {{ question.level === 0 ? '易' : question.level === 1 ?
+                                                                    '中等' : '难' }}
+                                                            </n-tag>
+                                                        </div>
+                                                    </n-space>
                                                 </div>
                                             </n-space>
-                                        </div>
-                                    </n-space>
-                                </n-collapse-item>
-                            </n-collapse>
-                        </div>
-                    </n-space>
-                </template>
+                                        </n-collapse-item>
+                                    </n-collapse>
+                                </n-card>
+                            </div>
+                        </n-space>
+                    </template>
+                </n-spin>
                 <template #footer>
                     <n-space justify="end">
                         <n-button @click="showExamDetailModal = false">关闭</n-button>
@@ -125,7 +165,7 @@
 </template>
 
 <script setup>
-import { h, ref, reactive, computed } from 'vue';
+import { h, ref, reactive, computed, onMounted } from 'vue';
 import { useMessage } from 'naive-ui';
 import {
     NCard,
@@ -144,9 +184,11 @@ import {
     NGi,
     NDivider,
     NCollapse,
-    NCollapseItem
+    NCollapseItem,
+    NSpin
 } from 'naive-ui';
 import { SearchOutline } from '@vicons/ionicons5';
+import { testResultApi } from '@/api/index.js';
 
 const message = useMessage();
 
@@ -154,156 +196,117 @@ const message = useMessage();
 const searchKeyword = ref('');
 const dateRange = ref(null);
 
-// 模拟历史考试数据
-const exams = reactive([
-    {
-        id: 1,
-        title: '期中考试 - 数学',
-        examTime: new Date('2023-10-15T10:00:00'),
-        duration: 120,
-        usedTime: 105,
-        totalScore: 100,
-        score: 85,
-        correctRate: 0.85,
-        rank: 12,
-        totalStudents: 60,
-        questionTypeAnalysis: [
-            { type: '单选题', total: 20, correct: 18, score: 36, totalScore: 40 },
-            { type: '多选题', total: 5, correct: 4, score: 16, totalScore: 20 },
-            { type: '判断题', total: 10, correct: 9, score: 9, totalScore: 10 },
-            { type: '填空题', total: 5, correct: 4, score: 8, totalScore: 10 },
-            { type: '简答题', total: 2, correct: 1, score: 16, totalScore: 20 }
-        ],
-        wrongQuestions: [
-            {
-                index: 8,
-                type: 'single',
-                content: '以下哪个选项不是二次函数的性质？',
-                userAnswer: 'C',
-                correctAnswer: 'D',
-                options: [
-                    { key: 'A', value: '二次函数图像是一条抛物线' },
-                    { key: 'B', value: '二次函数有最值' },
-                    { key: 'C', value: '二次函数图像关于对称轴对称' },
-                    { key: 'D', value: '二次函数图像必然经过坐标原点' }
-                ],
-                analysis: '二次函数的图像是抛物线，关于对称轴对称，有最值，但不一定经过坐标原点。'
-            },
-            {
-                index: 22,
-                type: 'fillblank',
-                content: '已知函数f(x)=ax²+bx+c的图像过点(1,3)，(2,6)，(3,11)，则a=____，b=____，c=____。',
-                userAnswer: '1,1,1',
-                correctAnswer: '1,2,0',
-                analysis: '将三个点代入函数，得到三个方程：a+b+c=3，4a+2b+c=6，9a+3b+c=11。解得a=1，b=2，c=0。'
-            }
-        ]
-    },
-    {
-        id: 2,
-        title: '期中考试 - 英语',
-        examTime: new Date('2023-10-16T14:00:00'),
-        duration: 120,
-        usedTime: 110,
-        totalScore: 100,
-        score: 78,
-        correctRate: 0.78,
-        rank: 25,
-        totalStudents: 60,
-        questionTypeAnalysis: [
-            { type: '单选题', total: 30, correct: 25, score: 50, totalScore: 60 },
-            { type: '阅读理解', total: 4, correct: 3, score: 15, totalScore: 20 },
-            { type: '作文', total: 1, correct: 0.65, score: 13, totalScore: 20 }
-        ],
-        wrongQuestions: [
-            {
-                index: 12,
-                type: 'single',
-                content: 'Which of the following is NOT a correct usage of the present perfect tense?',
-                userAnswer: 'B',
-                correctAnswer: 'C',
-                options: [
-                    { key: 'A', value: 'I have lived here for ten years.' },
-                    { key: 'B', value: 'She has finished her homework.' },
-                    { key: 'C', value: 'We have went to the park yesterday.' },
-                    { key: 'D', value: 'They have never seen this movie.' }
-                ],
-                analysis: 'The correct form should be "We have gone to the park yesterday", but present perfect tense cannot be used with specific past time expressions like "yesterday".'
-            }
-        ]
-    },
-    {
-        id: 3,
-        title: '期中考试 - 物理',
-        examTime: new Date('2023-10-18T09:00:00'),
-        duration: 90,
-        usedTime: 85,
-        totalScore: 100,
-        score: 92,
-        correctRate: 0.92,
-        rank: 5,
-        totalStudents: 60,
-        questionTypeAnalysis: [
-            { type: '单选题', total: 20, correct: 19, score: 38, totalScore: 40 },
-            { type: '多选题', total: 5, correct: 5, score: 20, totalScore: 20 },
-            { type: '计算题', total: 4, correct: 3.5, score: 34, totalScore: 40 }
-        ],
-        wrongQuestions: []
-    },
-    {
-        id: 4,
-        title: '期中考试 - 化学',
-        examTime: new Date('2023-10-20T09:00:00'),
-        duration: 90,
-        usedTime: 80,
-        totalScore: 100,
-        score: 65,
-        correctRate: 0.65,
-        rank: 40,
-        totalStudents: 60,
-        questionTypeAnalysis: [
-            { type: '单选题', total: 20, correct: 15, score: 30, totalScore: 40 },
-            { type: '多选题', total: 5, correct: 3, score: 12, totalScore: 20 },
-            { type: '实验题', total: 2, correct: 1.5, score: 15, totalScore: 20 },
-            { type: '计算题', total: 2, correct: 0.8, score: 8, totalScore: 20 }
-        ],
-        wrongQuestions: [
-            {
-                index: 18,
-                type: 'single',
-                content: '下列物质中，不能用作氧化剂的是：',
-                userAnswer: 'A',
-                correctAnswer: 'D',
-                options: [
-                    { key: 'A', value: 'KMnO₄' },
-                    { key: 'B', value: 'K₂Cr₂O₇' },
-                    { key: 'C', value: 'HNO₃' },
-                    { key: 'D', value: 'Na₂CO₃' }
-                ],
-                analysis: 'Na₂CO₃不具有氧化性，不能作为氧化剂。KMnO₄、K₂Cr₂O₇和HNO₃都是常见的氧化剂。'
-            }
-        ]
+// 数据状态
+const loading = ref(false);
+const exams = ref([]);
+const total = ref(0);
+
+// 数据结构基于后端TestHistoryVo实体类
+// 字段说明：
+// id: 主键ID
+// userId: 用户ID
+// testId: 考试ID
+// content: 考试结果报告内容(HTML格式)
+// timeUsed: 考试用时(秒)
+// score: 最终得分
+// name: 考试名称
+// startTime: 考试开始时间
+// endTime: 考试结束时间
+// durationMinutes: 考试持续时间(秒)
+
+// 加载考试历史数据
+const loadExamHistory = async () => {
+    try {
+        loading.value = true;
+        const response = await testResultApi.queryTestHistory(
+            searchKeyword.value,
+            pagination.page,
+            pagination.pageSize
+        );
+
+        if (response.code === 200) {
+            // 直接使用后端返回的TestHistoryVo数据
+            exams.value = response.data.map(item => {
+                const startTime = new Date(item.startTime);
+                const endTime = item.endTime ? new Date(item.endTime) : new Date(startTime.getTime() + item.durationMinutes * 1000);
+                const now = new Date();
+                const status = now > endTime ? '已结束' : '进行中';
+
+                return {
+                    // 保持后端字段名称
+                    id: item.id,
+                    userId: item.userId,
+                    testId: item.testId,
+                    content: item.content,
+                    timeUsed: item.timeUsed, // 秒
+                    score: item.score,
+                    name: item.name,
+                    startTime: item.startTime,
+                    endTime: item.endTime,
+                    durationMinutes: item.durationMinutes, // 秒
+
+                    // 为了兼容前端显示，添加计算字段
+                    title: item.name, // 兼容字段
+                    examTime: startTime, // 兼容字段
+                    status: status,
+                    usedTime: Math.round(item.timeUsed / 60), // 转换为分钟显示
+                    duration: Math.round(item.durationMinutes / 60), // 转换为分钟显示
+                    totalScore: 100 // 默认总分
+                };
+            });
+
+            // 移除这里的computed定义，将在组件级别定义
+            total.value = response.total || 0;
+            pagination.itemCount = total.value;
+        } else {
+            message.error(response.message || '加载考试历史失败');
+            exams.value = [];
+        }
+    } catch (error) {
+        console.error('加载考试历史失败:', error);
+        message.error('加载考试历史失败，请稍后重试');
+        exams.value = [];
+    } finally {
+        loading.value = false;
     }
-]);
+};
 
 // 表格列定义
 const columns = [
     {
         title: '考试名称',
-        key: 'title',
+        key: 'name',
+        render(row) {
+            return row.name || row.title;
+        }
     },
     {
         title: '考试时间',
         key: 'examTime',
         render(row) {
-            return formatDate(row.examTime);
+            return formatDate(row.startTime || row.examTime);
         }
     },
     {
         title: '用时',
         key: 'usedTime',
         render(row) {
-            return `${row.usedTime}/${row.duration} 分钟`;
+            const usedMinutes = Math.round((row.timeUsed || 0) / 60000);
+            const totalMinutes = Math.round((row.durationMinutes || 0) / 60000);
+            return `${usedMinutes}/${totalMinutes} 分钟`;
+        }
+    },
+    {
+        title: '状态',
+        key: 'status',
+        render(row) {
+            return h(
+                NTag,
+                {
+                    type: row.status === '已结束' ? 'default' : 'success'
+                },
+                { default: () => row.status }
+            );
         }
     },
     {
@@ -323,7 +326,9 @@ const columns = [
         title: '排名',
         key: 'rank',
         render(row) {
-            return `${row.rank}/${row.totalStudents}`;
+            const rank = row.rank || '-';
+            const total = row.totalStudents || '-';
+            return `${rank}/${total}`;
         }
     },
     {
@@ -381,58 +386,221 @@ const questionTypeColumns = [
 const pagination = reactive({
     page: 1,
     pageSize: 10,
+    itemCount: 0,
     showSizePicker: true,
     pageSizes: [10, 20, 30, 40],
     onChange: (page) => {
         pagination.page = page;
+        loadExamHistory();
     },
     onUpdatePageSize: (pageSize) => {
         pagination.pageSize = pageSize;
         pagination.page = 1;
+        loadExamHistory();
     }
 });
 
-// 过滤后的考试列表
+// 过滤后的考试列表（现在直接使用API返回的数据）
 const filteredExams = computed(() => {
-    return exams.filter(exam => {
-        // 关键字过滤
-        const keywordMatch = !searchKeyword.value || exam.title.toLowerCase().includes(searchKeyword.value.toLowerCase());
+    if (!dateRange.value || dateRange.value.length !== 2) {
+        return exams.value;
+    }
 
-        // 日期范围过滤
-        let dateMatch = true;
-        if (dateRange.value && dateRange.value.length === 2) {
-            const examDate = new Date(exam.examTime);
-            const startDate = new Date(dateRange.value[0]);
-            const endDate = new Date(dateRange.value[1]);
-            endDate.setHours(23, 59, 59, 999); // 设置为当天结束时间
+    // 只进行日期范围的本地过滤，关键字过滤由后端处理
+    return exams.value.filter(exam => {
+        const examDate = new Date(exam.startTime || exam.examTime);
+        const startDate = new Date(dateRange.value[0]);
+        const endDate = new Date(dateRange.value[1]);
+        endDate.setHours(23, 59, 59, 999); // 设置为当天结束时间
 
-            dateMatch = examDate >= startDate && examDate <= endDate;
+        return examDate >= startDate && examDate <= endDate;
+    });
+});
+
+// 计算题型分析数据
+const computedQuestionTypeAnalysis = computed(() => {
+    if (!selectedExam.value || !selectedExam.value.content) {
+        return [];
+    }
+
+    try {
+        // 解析content中的题目数据
+        let questions = [];
+        if (typeof selectedExam.value.content === 'string') {
+            // 如果content是JSON字符串，尝试解析
+            const parsedContent = JSON.parse(selectedExam.value.content);
+            // 支持多种数据结构
+            if (Array.isArray(parsedContent)) {
+                questions = parsedContent;
+            } else if (parsedContent.questions && Array.isArray(parsedContent.questions)) {
+                questions = parsedContent.questions;
+            } else if (parsedContent.questionList && Array.isArray(parsedContent.questionList)) {
+                questions = parsedContent.questionList;
+            }
+        } else if (Array.isArray(selectedExam.value.content)) {
+            // 如果content已经是数组
+            questions = selectedExam.value.content;
+        } else if (selectedExam.value.content.questions) {
+            // 如果content是对象且包含questions字段
+            questions = selectedExam.value.content.questions;
+        } else if (selectedExam.value.content.questionList) {
+            // 如果content是对象且包含questionList字段
+            questions = selectedExam.value.content.questionList;
         }
 
-        return keywordMatch && dateMatch;
-    });
+        // 确保questions是数组且不为空
+        if (!Array.isArray(questions) || questions.length === 0) {
+            console.warn('未找到有效的题目数据');
+            return [];
+        }
+
+        return analyzeQuestionTypes(questions);
+    } catch (error) {
+        console.error('解析题目数据失败:', error);
+        return [];
+    }
 });
 
 // 搜索考试
 const searchExams = () => {
-    // 已通过计算属性实现
-    message.success('搜索完成');
+    pagination.page = 1; // 重置到第一页
+    loadExamHistory();
 };
 
 // 重置搜索
 const resetSearch = () => {
     searchKeyword.value = '';
     dateRange.value = null;
+    pagination.page = 1; // 重置到第一页
+    loadExamHistory();
     message.success('已重置搜索条件');
 };
 
 // 查看考试详情
 const selectedExam = ref(null);
 const showExamDetailModal = ref(false);
+const loadingDetail = ref(false);
 
-const viewExamDetail = (exam) => {
-    selectedExam.value = exam;
-    showExamDetailModal.value = true;
+// 计算完整题目列表
+const computedAllQuestions = computed(() => {
+    if (!selectedExam.value || !selectedExam.value.content) {
+        return [];
+    }
+
+    try {
+        // 解析content中的题目数据（content是JSON字符串）
+        let questions = [];
+        if (typeof selectedExam.value.content === 'string') {
+            const parsedContent = JSON.parse(selectedExam.value.content);
+            if (Array.isArray(parsedContent)) {
+                questions = parsedContent;
+            } else if (parsedContent.questions && Array.isArray(parsedContent.questions)) {
+                questions = parsedContent.questions;
+            } else if (parsedContent.questionList && Array.isArray(parsedContent.questionList)) {
+                questions = parsedContent.questionList;
+            }
+        } else if (Array.isArray(selectedExam.value.content)) {
+            questions = selectedExam.value.content;
+        } else if (selectedExam.value.content.questions) {
+            questions = selectedExam.value.content.questions;
+        } else if (selectedExam.value.content.questionList) {
+            questions = selectedExam.value.content.questionList;
+        }
+
+        return questions.map((q, index) => ({
+            ...q,
+            index: index + 1,
+            title: q.title || q.content,
+            userAnswer: q.stuAnswerOption !== undefined ? q.stuAnswerOption : (q.studentAnswer !== undefined ? q.studentAnswer : q.stuAnswer),
+            correctAnswer: q.answerOption !== undefined ? q.answerOption : (q.correctAnswer !== undefined ? q.correctAnswer : q.answer),
+            explanation: q.explanation || q.analysis,
+            isCorrect: (() => {
+                const questionType = q.type !== undefined ? q.type : (q.questionType !== undefined ? q.questionType : q.qType);
+                if (questionType === 0 || questionType === 1) {
+                    const correctAnswer = q.answerOption !== undefined ? q.answerOption : (q.correctAnswer !== undefined ? q.correctAnswer : q.answer);
+                    const studentAnswer = q.stuAnswerOption !== undefined ? q.stuAnswerOption : (q.studentAnswer !== undefined ? q.studentAnswer : q.stuAnswer);
+                    return correctAnswer === studentAnswer;
+                } else {
+                    const correctAnswer = q.answer !== undefined ? q.answer : q.correctAnswer;
+                    const studentAnswer = q.stuAnswer !== undefined ? q.stuAnswer : q.studentAnswer;
+                    return correctAnswer === studentAnswer;
+                }
+            })()
+        }));
+    } catch (error) {
+        console.error('解析题目数据失败:', error);
+        return [];
+    }
+});
+
+const viewExamDetail = async (exam) => {
+    try {
+        loadingDetail.value = true;
+        showExamDetailModal.value = true;
+
+        // 从现有数据中查找对应的考试记录
+        const foundExam = exams.value.find(e => e.id === exam.id);
+        console.log('foundExam:', foundExam);
+        if (foundExam) {
+            // 直接使用找到的考试数据，content字段已经是JSON字符串格式
+            selectedExam.value = foundExam;
+            console.log('selectedExam content:', foundExam.content);
+        } else {
+            message.error('未找到对应的考试记录');
+            selectedExam.value = null;
+        }
+    } catch (error) {
+        console.error('获取考试详情失败:', error);
+        message.error('获取考试详情失败');
+    } finally {
+        loadingDetail.value = false;
+    }
+};
+
+// 分析题型统计
+const analyzeQuestionTypes = (questions) => {
+    const typeMap = {
+        0: { name: '选择题', total: 0, correct: 0 },
+        1: { name: '判断题', total: 0, correct: 0 },
+        2: { name: '简答题', total: 0, correct: 0 }
+    };
+
+    questions.forEach(q => {
+        // 支持多种字段名称映射
+        const questionType = q.type !== undefined ? q.type : (q.questionType !== undefined ? q.questionType : q.qType);
+
+        if (typeMap[questionType] !== undefined) {
+            typeMap[questionType].total++;
+
+            let isCorrect = false;
+            if (questionType === 0 || questionType === 1) { // 选择题或判断题
+                // 支持多种答案字段名称
+                const correctAnswer = q.answerOption !== undefined ? q.answerOption : (q.correctAnswer !== undefined ? q.correctAnswer : q.answer);
+                const studentAnswer = q.stuAnswerOption !== undefined ? q.stuAnswerOption : (q.studentAnswer !== undefined ? q.studentAnswer : q.stuAnswer);
+                isCorrect = correctAnswer === studentAnswer;
+            } else { // 简答题
+                // 支持多种答案字段名称
+                const correctAnswer = q.answer !== undefined ? q.answer : q.correctAnswer;
+                const studentAnswer = q.stuAnswer !== undefined ? q.stuAnswer : q.studentAnswer;
+                // 简答题可能需要更复杂的比较逻辑，这里简化处理
+                isCorrect = correctAnswer === studentAnswer;
+            }
+
+            if (isCorrect) {
+                typeMap[questionType].correct++;
+            }
+        }
+    });
+
+    return Object.values(typeMap)
+        .filter(type => type.total > 0)
+        .map(type => ({
+            type: type.name,
+            total: type.total,
+            correct: type.correct,
+            score: type.correct, // 简化处理，实际应该根据分值计算
+            totalScore: type.total
+        }));
 };
 
 // 格式化日期
@@ -445,25 +613,59 @@ const formatDate = (date) => {
 // 获取题型名称
 const getQuestionTypeName = (type) => {
     const typeMap = {
-        'single': '单选题',
-        'multiple': '多选题',
-        'truefalse': '判断题',
-        'fillblank': '填空题',
-        'shortanswer': '简答题'
+        0: '选择题',
+        1: '判断题',
+        2: '简答题'
     };
-    return typeMap[type] || type;
+    return typeMap[type];
 };
 
 // 格式化答案显示
-const formatAnswer = (answer, type) => {
-    if (!answer) return '未作答';
+const formatAnswer = (type, question = null, isRight) => {
+    if (!isRight) { // 显示正确答案
+        const answer = question.answer;
+        const answerOption = question.answerOption;
+        if (!answer && !answerOption) return '无';
 
-    if (type === 'multiple' && Array.isArray(answer)) {
-        return answer.join(', ');
+        // 处理新的题型编号
+        if (type === 0) { // 选择题
+            // 如果有题目对象且包含选项，显示选项内容
+            if (answerOption) {
+                const options = ['A', 'B', 'C', 'D'];
+                return `${options[answerOption]}`;
+            }
+            return '未知';
+        } else if (type === 1) { // 判断题
+            return answerOption === 0 ? '正确' : answerOption === 1 ? '错误' : answerOption;
+        } else if (type === 2) { // 简答题
+            return answer;
+        }
+    } else { // 显示用户答案
+        const answer = question.stuAnswer;
+        const answerOption = question.stuAnswerOption;
+        if (!answer && !answerOption) return '未作答';
+
+        // 处理新的题型编号
+        if (type === 0) { // 选择题
+            // 如果有题目对象且包含选项，显示选项内容
+            if (answerOption) {
+                const options = ['A', 'B', 'C', 'D'];
+                return `${options[answerOption]}`;
+            }
+            return '未知';
+        } else if (type === 1) { // 判断题
+            return answerOption === 0 ? '正确' : answerOption === 1 ? '错误' : answerOption;
+        } else if (type === 2) { // 简答题
+            return answer;
+        }
     }
-
-    return answer;
+    return '未知';
 };
+
+// 组件挂载时加载数据
+onMounted(() => {
+    loadExamHistory();
+});
 </script>
 
 <style scoped>
@@ -504,15 +706,49 @@ const formatAnswer = (answer, type) => {
 
 .score-analysis,
 .question-type-analysis,
-.wrong-questions {
+.wrong-questions,
+.all-questions {
     margin-bottom: 20px;
 }
 
 .score-analysis h3,
 .question-type-analysis h3,
-.wrong-questions h3 {
+.wrong-questions h3,
+.all-questions h3 {
     margin-bottom: 10px;
     font-size: 16px;
     font-weight: bold;
+}
+
+.question-content {
+    background-color: #444444;
+    color: #fff;
+    padding: 12px;
+    border-radius: 6px;
+    border-left: 4px solid #007bff;
+}
+
+.answer-analysis {
+    background-color: #444444;
+    color: #fff;
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.question-options {
+    margin: 10px 0;
+    padding: 10px;
+    color: #fff;
+    background-color: #444444;
+    border-radius: 6px;
+}
+
+.option-item {
+    margin: 5px 0;
+    padding: 5px 10px;
+    background-color: #ffffff;
+    border-radius: 4px;
+    border-left: 3px solid #007bff;
 }
 </style>

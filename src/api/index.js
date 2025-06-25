@@ -130,6 +130,18 @@ export const questionBankApi = {
   deleteQuestion: (id) => put(`${BASE_URL}/exam/questionBank/delete`, null, { params: { id } }),
 };
 
+/**
+ * 考试结果相关API
+ */
+export const testResultApi = {
+  // 查询考试结果历史
+  queryTestHistory: (keyWord, pageNum = 1, pageSize = 10) => {
+    const params = { pageNum, pageSize };
+    if (keyWord) params.keyWord = keyWord;
+    return get(`${BASE_URL}/exam/tetsResult/query`, params);
+  },
+};
+
 
 
 // 导出所有API
@@ -140,4 +152,5 @@ export default {
   studentApi,
   questionBankApi,
   examApi,
+  testResultApi,
 };
