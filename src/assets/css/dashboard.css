@@ -76,6 +76,7 @@
 .header-right {
     display: flex;
     align-items: center;
+    margin-right: 13%;
 }
 
 .username {

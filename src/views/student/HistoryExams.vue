@@ -3,7 +3,7 @@
         <n-card title="历史考试记录" class="history-exams-card">
             <!-- 搜索和筛选 -->
             <n-space vertical>
-                <n-space>
+                <n-space class="filter-margin">
                     <n-input v-model:value="searchKeyword" placeholder="搜索考试名称" style="width: 200px">
                         <template #prefix>
                             <n-icon><search-outline /></n-icon>
@@ -17,8 +17,7 @@
             </n-space>
 
             <!-- 历史考试列表 -->
-            <n-data-table :columns="columns" :data="filteredExams" :pagination="pagination" :bordered="false"
-                striped />
+            <n-data-table :columns="columns" :data="filteredExams" :pagination="pagination" :bordered="false" striped />
 
             <!-- 考试详情模态框 -->
             <n-modal v-model:show="showExamDetailModal" preset="card" title="考试详情" style="width: 700px">
@@ -95,11 +94,13 @@
                                             <n-space vertical>
                                                 <div>
                                                     <strong>您的答案:</strong>
-                                                    <span class="wrong-answer">{{ formatAnswer(question.userAnswer, question.type) }}</span>
+                                                    <span class="wrong-answer">{{ formatAnswer(question.userAnswer,
+                                                        question.type) }}</span>
                                                 </div>
                                                 <div>
                                                     <strong>正确答案:</strong>
-                                                    <span class="correct-answer">{{ formatAnswer(question.correctAnswer, question.type) }}</span>
+                                                    <span class="correct-answer">{{ formatAnswer(question.correctAnswer,
+                                                        question.type) }}</span>
                                                 </div>
                                                 <div v-if="question.analysis">
                                                     <strong>解析:</strong>
@@ -396,7 +397,7 @@ const filteredExams = computed(() => {
     return exams.filter(exam => {
         // 关键字过滤
         const keywordMatch = !searchKeyword.value || exam.title.toLowerCase().includes(searchKeyword.value.toLowerCase());
-        
+
         // 日期范围过滤
         let dateMatch = true;
         if (dateRange.value && dateRange.value.length === 2) {
@@ -404,10 +405,10 @@ const filteredExams = computed(() => {
             const startDate = new Date(dateRange.value[0]);
             const endDate = new Date(dateRange.value[1]);
             endDate.setHours(23, 59, 59, 999); // 设置为当天结束时间
-            
+
             dateMatch = examDate >= startDate && examDate <= endDate;
         }
-        
+
         return keywordMatch && dateMatch;
     });
 });
@@ -456,11 +457,11 @@ const getQuestionTypeName = (type) => {
 // 格式化答案显示
 const formatAnswer = (answer, type) => {
     if (!answer) return '未作答';
-    
+
     if (type === 'multiple' && Array.isArray(answer)) {
         return answer.join(', ');
     }
-    
+
     return answer;
 };
 </script>

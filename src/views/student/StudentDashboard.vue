@@ -55,12 +55,36 @@
                     </n-layout-footer>
                 </n-layout>
             </n-layout>
+
+            <!-- 修改密码模态框 -->
+            <n-modal v-model:show="showChangePasswordModal" preset="card" title="修改密码" style="width: 400px">
+                <n-form>
+                    <n-form-item label="当前密码">
+                        <n-input v-model:value="changePasswordForm.oldPassword" type="password" placeholder="请输入当前密码" />
+                    </n-form-item>
+                    <n-form-item label="新密码">
+                        <n-input v-model:value="changePasswordForm.newPassword" type="password"
+                            placeholder="请输入新密码（至少6位）" />
+                    </n-form-item>
+                    <n-form-item label="确认新密码">
+                        <n-input v-model:value="changePasswordForm.confirmPassword" type="password"
+                            placeholder="请再次输入新密码" />
+                    </n-form-item>
+                </n-form>
+                <template #footer>
+                    <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                        <n-button @click="handleCancelChangePassword">取消</n-button>
+                        <n-button type="primary" :loading="changePasswordLoading"
+                            @click="handleChangePassword">确认修改</n-button>
+                    </div>
+                </template>
+            </n-modal>
         </div>
     </n-config-provider>
 </template>
 
 <script setup>
-import { h, ref, computed } from 'vue';
+import { h, ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useMessage, darkTheme } from 'naive-ui';
 import { userApi } from '../../api';
@@ -78,13 +102,18 @@ import {
     NAvatar,
     NIcon,
     NDropdown,
-    NResult
+    NResult,
+    NModal,
+    NForm,
+    NFormItem,
+    NInput
 } from 'naive-ui';
 import {
     PersonOutline,
     DocumentTextOutline,
     LogOutOutline,
-    TimeOutline
+    TimeOutline,
+    KeyOutline
 } from '@vicons/ionicons5';
 
 // 引入CSS
@@ -96,8 +125,18 @@ const message = useMessage();
 
 // 用户信息
 const username = ref('学生');
+const userInfo = ref(null);
 const collapsed = ref(false);
 const activeKey = ref(null);
+
+// 修改密码相关
+const showChangePasswordModal = ref(false);
+const changePasswordForm = ref({
+    oldPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+});
+const changePasswordLoading = ref(false);
 
 // 菜单选项 - 学生只有两个选项
 const menuOptions = [
@@ -108,7 +147,7 @@ const menuOptions = [
         path: '/student/exam-list'
     },
     {
-        label: '历史考试',
+        label: '我的考试',
         key: 'history-exams',
         icon: renderIcon(TimeOutline),
         path: '/student/history-exams'
@@ -121,6 +160,11 @@ const userOptions = [
         label: '个人信息',
         key: 'profile',
         icon: renderIcon(PersonOutline)
+    },
+    {
+        label: '修改密码',
+        key: 'change-password',
+        icon: renderIcon(KeyOutline)
     },
     {
         label: '退出登录',
@@ -155,8 +199,81 @@ const handleUserAction = (key) => {
         logout();
     } else if (key === 'profile') {
         message.info('个人信息功能待实现');
+    } else if (key === 'change-password') {
+        showChangePasswordModal.value = true;
     }
 };
+
+// 获取用户信息
+const getUserInfo = async () => {
+    try {
+        const response = await userApi.getUserInfo();
+        if (response.code === 200) {
+            userInfo.value = response.data;
+            username.value = response.data.username || '学生';
+        }
+    } catch (error) {
+        console.error('获取用户信息失败:', error);
+    }
+};
+
+// 修改密码
+const handleChangePassword = async () => {
+    if (!changePasswordForm.value.oldPassword || !changePasswordForm.value.newPassword) {
+        message.error('请填写完整的密码信息');
+        return;
+    }
+
+    if (changePasswordForm.value.newPassword !== changePasswordForm.value.confirmPassword) {
+        message.error('新密码和确认密码不一致');
+        return;
+    }
+
+    if (changePasswordForm.value.newPassword.length < 6) {
+        message.error('新密码长度不能少于6位');
+        return;
+    }
+
+    try {
+        changePasswordLoading.value = true;
+        const response = await userApi.changePassword({
+            oldPassword: changePasswordForm.value.oldPassword,
+            newPassword: changePasswordForm.value.newPassword
+        });
+
+        if (response.code === 200) {
+            message.success('密码修改成功');
+            showChangePasswordModal.value = false;
+            // 重置表单
+            changePasswordForm.value = {
+                oldPassword: '',
+                newPassword: '',
+                confirmPassword: ''
+            };
+        } else {
+            message.error(response.message || '密码修改失败');
+        }
+    } catch (error) {
+        message.error(error.message || '密码修改失败');
+    } finally {
+        changePasswordLoading.value = false;
+    }
+};
+
+// 取消修改密码
+const handleCancelChangePassword = () => {
+    showChangePasswordModal.value = false;
+    changePasswordForm.value = {
+        oldPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+    };
+};
+
+// 组件挂载时获取用户信息
+onMounted(() => {
+    getUserInfo();
+});
 
 // 退出登录
 const logout = async () => {

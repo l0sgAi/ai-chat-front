@@ -14,13 +14,13 @@ export const userApi = {
   register: (data) => post(`${BASE_URL}/sys/user/auth/doRegister`, data),
   
   // 获取用户信息
-  getUserInfo: () => get(`${BASE_URL}/sys/user/info`),
+  getUserInfo: () => get(`${BASE_URL}/sys/user/getUserInfo`),
   
   // 更新用户信息
   updateUserInfo: (data) => put(`${BASE_URL}/sys/user/info`, data),
   
   // 修改密码
-  changePassword: (data) => post(`${BASE_URL}/sys/user/password`, data),
+  changePassword: (data) => put(`${BASE_URL}/sys/user/update`, data),
   
   // 退出登录
   logout: () => post(`${BASE_URL}/sys/user/doLogout`),
@@ -47,6 +47,40 @@ export const chatApi = {
   
   // 重命名会话
   renameConversation: (conversationId, title) => put(`${BASE_URL}/chat/conversation`, { conversationId, title }),
+};
+
+/**
+ * 考试相关API
+ */
+export const examApi = {
+  // 查询考试列表
+  getExams: (params) => get(`${BASE_URL}/exam/tests/query`, params),
+  
+  // 新增考试
+  addExam: (data) => post(`${BASE_URL}/exam/tests/add`, data),
+  
+  // 更新考试
+  updateExam: (data) => put(`${BASE_URL}/exam/tests/update`, data),
+  
+  // 删除考试
+  deleteExam: (id) => put(`${BASE_URL}/exam/tests/delete`, null, { params: { id } }),
+  
+  // 查询考试列表（带状态过滤）
+  queryExams: (keyWord, status, pageNum = 1, pageSize = 10) => {
+    const params = { pageNum, pageSize };
+    if (keyWord) params.keyWord = keyWord;
+    if (status !== null && status !== undefined) params.status = status;
+    return get(`${BASE_URL}/exam/tests/query`, params);
+  },
+  
+  // 获取考试题目
+  getTestQuestion: (testId) => get(`${BASE_URL}/exam/tests/getTestQuestion`,null, { params: { testId } }),
+  
+  // 保存考试答案
+  saveAnswers: (data) => post(`${BASE_URL}/exam/tests/saveAnswers`, data),
+  
+  // 提交考试
+  submitExam: (data) => post(`${BASE_URL}/exam/tests/submitExam`, data),
 };
 
 /**
@@ -96,27 +130,7 @@ export const questionBankApi = {
   deleteQuestion: (id) => put(`${BASE_URL}/exam/questionBank/delete`, null, { params: { id } }),
 };
 
-/**
- * 考试相关API
- */
-export const examApi = {
-  // 添加考试
-  addExam: (data) => post(`${BASE_URL}/exam/tests/add`, data),
-  
-  // 查询考试列表
-  queryExams: (keyWord, status, pageNum = 1, pageSize = 10) => {
-    const params = { pageNum, pageSize };
-    if (keyWord) params.keyWord = keyWord;
-    if (status !== null && status !== undefined) params.status = status;
-    return get(`${BASE_URL}/exam/tests/query`, params);
-  },
-  
-  // 更新考试信息
-  updateExam: (data) => put(`${BASE_URL}/exam/tests/update`, data),
-  
-  // 删除考试
-  deleteExam: (id) => put(`${BASE_URL}/exam/tests/delete`, null, { params: { id } }),
-};
+
 
 // 导出所有API
 export default {

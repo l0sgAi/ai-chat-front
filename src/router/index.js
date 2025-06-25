@@ -51,7 +51,7 @@ const routes = [
         path: "data-analysis",
         name: "DataAnalysis",
         component: () => import("../views/dashboard/DataAnalysis.vue"),
-      },
+      }
     ],
   },
   {
@@ -68,6 +68,11 @@ const routes = [
         path: "exam-list",
         name: "ExamList",
         component: () => import("../views/student/ExamList.vue"),
+      },
+      {
+        path: "exam-taking",
+        name: "ExamTaking",
+        component: () => import("../views/student/ExamTaking.vue"),
       },
       {
         path: "history-exams",
