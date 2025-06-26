@@ -138,6 +138,21 @@
       </template>
     </n-modal>
 
+    <!-- 提交处理中模态框 -->
+    <n-modal v-model:show="showSubmittingModal" preset="card" title="正在提交考试" style="width: 500px;" :mask-closable="false" :close-on-esc="false">
+      <div style="text-align: center; padding: 40px 20px;">
+        <n-spin size="large">
+          <template #description>
+            <div style="margin-top: 16px;">
+              <p style="font-size: 16px; margin-bottom: 8px;">{{ submittingMessage }}</p>
+              <p style="font-size: 14px; color: #909399;">AI正在智能评分，请耐心等待...</p>
+              <p style="font-size: 12px; color: #c0c4cc; margin-top: 16px;">请不要关闭页面或刷新浏览器</p>
+            </div>
+          </template>
+        </n-spin>
+      </div>
+    </n-modal>
+
     <!-- 考试结果模态框 -->
     <n-modal v-model:show="showResultModal" preset="card" title="考试结果" style="width: 600px;" :mask-closable="false">
       <template v-if="examResult">
@@ -197,12 +212,18 @@ const loading = ref(true);
 const saving = ref(false);
 const submitting = ref(false);
 const showSubmitModal = ref(false);
+const showSubmittingModal = ref(false);
 const showResultModal = ref(false);
+const submittingMessage = ref('正在提交答案...');
 const offset = (8 * 60 * 60 * 1000);
 // 题目数据
 const questions = reactive([]);
 const userAnswers = reactive({});
 const examResult = ref(null);
+
+// 防作弊相关
+const devToolsOpen = ref(false);
+const devToolsTimer = ref(null);
 
 // 计时相关
 const startTime = ref(Date.now());
@@ -269,6 +290,130 @@ const startCountdown = () => {
   countdownTimer.value = setInterval(() => {
     updateRemainingTime();
   }, 1000);
+};
+
+// 检测开发者工具是否打开
+const detectDevTools = () => {
+  const threshold = 160; // 检测阈值
+  
+  // 方法1: 检测窗口尺寸变化
+  const widthThreshold = window.outerWidth - window.innerWidth > threshold;
+  const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+  
+  // 方法2: 检测console.log的执行时间
+  let start = performance.now();
+  console.log('%c', 'color: transparent');
+  let end = performance.now();
+  const consoleTime = end - start;
+  
+  // 方法3: 检测debugger语句
+  let debuggerDetected = false;
+  try {
+    const before = performance.now();
+    debugger;
+    const after = performance.now();
+    debuggerDetected = (after - before) > 100;
+  } catch (e) {
+    // debugger被阻止
+  }
+  
+  return widthThreshold || heightThreshold || consoleTime > 1 || debuggerDetected;
+};
+
+// 启动防作弊检测
+const startAntiCheatDetection = () => {
+  if (devToolsTimer.value) {
+    clearInterval(devToolsTimer.value);
+  }
+  
+  // 每500ms检测一次
+  devToolsTimer.value = setInterval(() => {
+    if (!examStarted.value || submitting.value) {
+      return; // 考试未开始或正在提交时不检测
+    }
+    
+    const isDevToolsOpen = detectDevTools();
+    
+    if (isDevToolsOpen && !devToolsOpen.value) {
+      devToolsOpen.value = true;
+      message.error('检测到开发者工具，考试将自动提交！');
+      
+      // 延迟1秒后自动提交，给用户看到提示信息的时间
+      setTimeout(() => {
+        if (examStarted.value && !submitting.value) {
+          confirmSubmit();
+        }
+      }, 1000);
+    }
+  }, 500);
+};
+
+// 停止防作弊检测
+const stopAntiCheatDetection = () => {
+  if (devToolsTimer.value) {
+    clearInterval(devToolsTimer.value);
+    devToolsTimer.value = null;
+  }
+};
+
+// 禁用开发者工具快捷键
+const disableDevToolsShortcuts = (event) => {
+  // 禁用F12
+  if (event.keyCode === 123) {
+    event.preventDefault();
+    message.warning('禁止使用开发者工具！');
+    return false;
+  }
+  
+  // 禁用Ctrl+Shift+I (Chrome开发者工具)
+  if (event.ctrlKey && event.shiftKey && event.keyCode === 73) {
+    event.preventDefault();
+    message.warning('禁止使用开发者工具！');
+    return false;
+  }
+  
+  // 禁用Ctrl+Shift+C (Chrome元素选择器)
+  if (event.ctrlKey && event.shiftKey && event.keyCode === 67) {
+    event.preventDefault();
+    message.warning('禁止使用开发者工具！');
+    return false;
+  }
+  
+  // 禁用Ctrl+Shift+J (Chrome控制台)
+  if (event.ctrlKey && event.shiftKey && event.keyCode === 74) {
+    event.preventDefault();
+    message.warning('禁止使用开发者工具！');
+    return false;
+  }
+  
+  // 禁用Ctrl+U (查看源代码)
+  if (event.ctrlKey && event.keyCode === 85) {
+    event.preventDefault();
+    message.warning('禁止查看源代码！');
+    return false;
+  }
+  
+  // 禁用Ctrl+S (保存页面)
+  if (event.ctrlKey && event.keyCode === 83) {
+    event.preventDefault();
+    message.warning('禁止保存页面！');
+    return false;
+  }
+};
+
+// 禁用右键菜单
+const disableContextMenu = (event) => {
+  event.preventDefault();
+  message.warning('考试期间禁止使用右键菜单！');
+  return false;
+};
+
+// 禁用文本选择
+const disableTextSelection = (event) => {
+  if (event.target.tagName !== 'INPUT' && event.target.tagName !== 'TEXTAREA') {
+    event.preventDefault();
+    return false;
+  }
 };
 
 // 更新剩余时间
@@ -508,9 +653,18 @@ const confirmSubmit = async () => {
   try {
     submitting.value = true;
     showSubmitModal.value = false;
+    showSubmittingModal.value = true;
+    submittingMessage.value = '正在提交答案...';
 
     // 停止自动保存
     stopAutoSave();
+
+    // 停止防作弊检测
+    stopAntiCheatDetection();
+
+    // 阶段1：准备数据
+    submittingMessage.value = '正在整理答题数据...';
+    await new Promise(resolve => setTimeout(resolve, 500)); // 给用户一些视觉反馈
 
     // 构建符合后端TestResult格式的提交数据
     const answerData = questions.map(question => ({
@@ -538,10 +692,21 @@ const confirmSubmit = async () => {
       content: JSON.stringify(answerData) // 将答题情况转换为JSON字符串
     };
 
+    // 阶段2：提交到服务器
+    submittingMessage.value = '正在上传答案到服务器...';
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // 阶段3：AI评分处理
+    submittingMessage.value = 'AI正在智能评分，请稍候...';
+    
     // 调用提交考试的API
     const response = await testResultApi.submitTestResult(testResult);
 
     if (response.code === 200) {
+      // 阶段4：处理结果
+      submittingMessage.value = '正在生成考试结果...';
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       examResult.value = {
         examId: examInfo.id,
         title: examInfo.title,
@@ -551,15 +716,18 @@ const confirmSubmit = async () => {
       };
 
       examStarted.value = false;
+      showSubmittingModal.value = false;
       showResultModal.value = true;
       message.success('考试提交成功');
     } else {
+      showSubmittingModal.value = false;
       message.error(response.message || '提交考试失败');
     }
 
   } catch (error) {
     console.error('提交考试失败:', error);
-    message.error('提交考试失败');
+    showSubmittingModal.value = false;
+    message.error('提交考试失败，请重试');
   } finally {
     submitting.value = false;
   }
@@ -567,12 +735,21 @@ const confirmSubmit = async () => {
 
 // 自动提交考试（时间到）
 const autoSubmitExam = () => {
+  if (submitting.value) {
+    // 如果正在提交中，不重复提交
+    return;
+  }
   message.warning('考试时间已到，系统自动提交');
   confirmSubmit();
 };
 
 // 返回考试列表
 const goBack = () => {
+  if (submitting.value) {
+    message.warning('考试正在提交中，请稍候...');
+    return;
+  }
+  
   if (examStarted.value) {
     if (window.confirm('考试正在进行中，确定要离开吗？离开后考试将继续计时。')) {
       router.push('/student/exam-list');
@@ -590,10 +767,15 @@ const goBackToList = () => {
 
 // 页面离开前的确认
 const handleBeforeUnload = (event) => {
-  if (examStarted.value) {
+  if (examStarted.value || submitting.value) {
     event.preventDefault();
-    event.returnValue = '考试正在进行中，确定要离开吗？';
-    return '考试正在进行中，确定要离开吗？';
+    if (submitting.value) {
+      event.returnValue = '考试正在提交中，请不要离开页面！';
+      return '考试正在提交中，请不要离开页面！';
+    } else {
+      event.returnValue = '考试正在进行中，确定要离开吗？';
+      return '考试正在进行中，确定要离开吗？';
+    }
   }
 };
 
@@ -604,6 +786,15 @@ onMounted(() => {
 
   // 启动自动保存
   startAutoSave();
+
+  // 启动防作弊检测
+  startAntiCheatDetection();
+
+  // 添加防作弊事件监听器
+  document.addEventListener('keydown', disableDevToolsShortcuts);
+  document.addEventListener('contextmenu', disableContextMenu);
+  document.addEventListener('selectstart', disableTextSelection);
+  document.addEventListener('dragstart', disableTextSelection);
 
   // 添加页面离开前的确认
   window.addEventListener('beforeunload', handleBeforeUnload);
@@ -620,11 +811,39 @@ onBeforeUnmount(() => {
   // 停止自动保存
   stopAutoSave();
 
+  // 停止防作弊检测
+  stopAntiCheatDetection();
+
+  // 移除防作弊事件监听器
+  document.removeEventListener('keydown', disableDevToolsShortcuts);
+  document.removeEventListener('contextmenu', disableContextMenu);
+  document.removeEventListener('selectstart', disableTextSelection);
+  document.removeEventListener('dragstart', disableTextSelection);
+
   window.removeEventListener('beforeunload', handleBeforeUnload);
 });
 </script>
 
 <style scoped>
+/* 防作弊样式 */
+.exam-taking-container {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 允许输入框和文本域选择文本 */
+.exam-taking-container input,
+.exam-taking-container textarea {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
 /* 深色模式样式 */
 .exam-taking-container {
   padding: 20px;
