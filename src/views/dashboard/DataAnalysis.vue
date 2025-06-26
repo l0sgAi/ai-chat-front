@@ -8,8 +8,10 @@
                         style="width: 250px" @update:value="onFilterChange" />
                     <n-select v-model:value="selectedClass" :options="classOptions" placeholder="选择班级"
                         style="width: 200px" @update:value="onFilterChange" />
-                    <n-date-picker v-model:value="dateRange" type="daterange" clearable placeholder="选择日期范围" @update:value="onFilterChange" />
+                    <n-date-picker v-model:value="dateRange" type="daterange" clearable placeholder="选择日期范围"
+                        @update:value="onFilterChange" />
                     <n-button @click="refreshData" :loading="loading">刷新数据</n-button>
+                    <n-button @click="resetFilters" type="default">重置条件</n-button>
                 </n-space>
             </n-space>
 
@@ -346,16 +348,16 @@ const fetchData = async () => {
 // 处理数据
 const processData = () => {
     if (!rawData.value.length) return;
-    
+
     // 计算统计数据
     calculateStatistics();
-    
+
     // 处理学生排名数据
     processStudentRankData();
-    
+
     // 处理试题难度分析数据
     processQuestionAnalysisData();
-    
+
     // 更新筛选选项
     updateFilterOptions();
 };
@@ -363,13 +365,13 @@ const processData = () => {
 // 计算统计数据
 const calculateStatistics = () => {
     const data = getFilteredData();
-    
+
     statistics.totalStudents = data.length;
-    statistics.averageScore = data.length > 0 ? 
+    statistics.averageScore = data.length > 0 ?
         Math.round(data.reduce((sum, item) => sum + item.score, 0) / data.length * 10) / 10 : 0;
-    statistics.passRate = data.length > 0 ? 
+    statistics.passRate = data.length > 0 ?
         Math.round(data.filter(item => item.score >= 60).length / data.length * 1000) / 10 : 0;
-    statistics.averageTime = data.length > 0 ? 
+    statistics.averageTime = data.length > 0 ?
         Math.round(data.reduce((sum, item) => sum + item.timeUsed, 0) / data.length / 60) : 0;
 };
 
@@ -381,14 +383,14 @@ const processStudentRankData = () => {
             rank: index + 1,
             ...item
         }));
-    
+
     studentRankData.value = data;
 };
 
 // 处理试题难度分析数据
 const processQuestionAnalysisData = () => {
     const examMap = new Map();
-    
+
     // 按考试分组并计算平均分
     rawData.value.forEach(item => {
         if (item.testId && item.testName) {
@@ -404,17 +406,17 @@ const processQuestionAnalysisData = () => {
             examMap.get(item.testId).totalStudents++;
         }
     });
-    
+
     // 计算每个考试的平均分并排序
     const analysisData = Array.from(examMap.values())
         .map(exam => {
-            const averageScore = exam.scores.length > 0 
-                ? exam.scores.reduce((sum, score) => sum + score, 0) / exam.scores.length 
+            const averageScore = exam.scores.length > 0
+                ? exam.scores.reduce((sum, score) => sum + score, 0) / exam.scores.length
                 : 0;
-            const passRate = exam.scores.length > 0 
-                ? exam.scores.filter(score => score >= 60).length / exam.scores.length 
+            const passRate = exam.scores.length > 0
+                ? exam.scores.filter(score => score >= 60).length / exam.scores.length
                 : 0;
-            
+
             return {
                 id: exam.testId,
                 testName: exam.testName,
@@ -425,7 +427,7 @@ const processQuestionAnalysisData = () => {
             };
         })
         .sort((a, b) => b.averageScore - a.averageScore); // 按平均分倒序排列
-    
+
     questionAnalysisData.value = analysisData;
 };
 
@@ -442,7 +444,7 @@ const updateFilterOptions = () => {
         { label: '全部考试', value: 'all' },
         ...Array.from(examMap.entries()).map(([id, name]) => ({ label: String(name), value: String(id) }))
     ];
-    
+
     // 更新班级选项
     const classSet = new Set();
     rawData.value.forEach(item => {
@@ -459,23 +461,36 @@ const updateFilterOptions = () => {
 // 获取筛选后的数据
 const getFilteredData = () => {
     let data = rawData.value;
-    
+
     // 按考试筛选
     if (selectedExam.value && selectedExam.value !== 'all') {
         data = data.filter(item => String(item.testId) === String(selectedExam.value));
     }
-    
+
     // 按班级筛选
     if (selectedClass.value && selectedClass.value !== 'all') {
         data = data.filter(item => item.classname === selectedClass.value);
     }
-    
-    // 按日期筛选
+
+    // 按日期筛选（使用endTime字段）
     if (dateRange.value && dateRange.value.length === 2) {
-        // 这里需要根据实际的日期字段进行筛选
-        // 由于EchartDisplayVo中没有日期字段，暂时跳过
+        const [startDate, endDate] = dateRange.value;
+        data = data.filter(item => {
+            if (!item.endTime) return false;
+
+            // 将endTime转换为Date对象进行比较
+            const endTime = new Date(item.endTime);
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+
+            // 设置时间范围：开始日期的00:00:00到结束日期的23:59:59
+            start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
+
+            return endTime >= start && endTime <= end;
+        });
     }
-    
+
     return data;
 };
 
@@ -495,7 +510,7 @@ const initScoreDistributionChart = () => {
     if (!chartDom) return;
 
     const data = getFilteredData();
-    
+
     // 计算成绩分布
     const scoreRanges = {
         '<60分': 0,
@@ -504,7 +519,7 @@ const initScoreDistributionChart = () => {
         '80-90分': 0,
         '90-100分': 0
     };
-    
+
     data.forEach(item => {
         const score = item.score;
         if (score < 60) scoreRanges['<60分']++;
@@ -572,7 +587,7 @@ const initClassComparisonChart = () => {
     if (!chartDom) return;
 
     const data = getFilteredData();
-    
+
     // 计算各班级平均分
     const classStats = {};
     data.forEach(item => {
@@ -585,7 +600,7 @@ const initClassComparisonChart = () => {
         classStats[item.classname].totalScore += item.score;
         classStats[item.classname].count++;
     });
-    
+
     const classNames = Object.keys(classStats);
     const averageScores = classNames.map(className => {
         const stats = classStats[className];
@@ -640,7 +655,7 @@ const initTimeDistributionChart = () => {
     if (!chartDom) return;
 
     const data = getFilteredData();
-    
+
     // 计算用时分布（按分钟分组）
     const timeRanges = {
         '0-10分钟': 0,
@@ -649,7 +664,7 @@ const initTimeDistributionChart = () => {
         '30-60分钟': 0,
         '60分钟以上': 0
     };
-    
+
     data.forEach(item => {
         const timeInMinutes = Math.floor(item.timeUsed / 60);
         if (timeInMinutes <= 10) timeRanges['0-10分钟']++;
@@ -718,7 +733,7 @@ const initTrendChart = () => {
     if (!chartDom) return;
 
     const data = getFilteredData();
-    
+
     // 按考试分组统计
     const examStats = {};
     data.forEach(item => {
@@ -738,7 +753,7 @@ const initTrendChart = () => {
         if (item.score >= 60) stats.passCount++;
         if (item.score >= 85) stats.excellentCount++;
     });
-    
+
     const examNames = Object.keys(examStats);
     const averageScores = examNames.map(name => {
         const stats = examStats[name];
@@ -867,11 +882,25 @@ const refreshData = async () => {
     message.success('数据已刷新');
 };
 
+// 重置查询条件
+const resetFilters = () => {
+    selectedExam.value = 'all';
+    selectedClass.value = 'all';
+    dateRange.value = null;
+    
+    // 重置后重新处理数据和图表
+    processData();
+    initCharts();
+    
+    message.success('查询条件已重置');
+};
+
 // 监听筛选条件变化
 const onFilterChange = () => {
     processData();
     initCharts();
 };
+
 
 // 导出Excel
 const exportExcel = () => {
