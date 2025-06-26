@@ -139,17 +139,23 @@ export const testResultApi = {
   queryTestHistory: (keyWord, pageNum = 1, pageSize = 10) => {
     const params = { pageNum, pageSize };
     if (keyWord) params.keyWord = keyWord;
-    return get(`${BASE_URL}/exam/tetsResult/query`, params);
+    return get(`${BASE_URL}/exam/testResult/query`, params);
   },
   
   // 保存考试结果
-  updateTestResult: (data) => put(`${BASE_URL}/exam/tetsResult/update`, data),
+  updateTestResult: (data) => put(`${BASE_URL}/exam/testResult/update`, data),
   
   // 提交考试结果
-  submitTestResult: (data) => put(`${BASE_URL}/exam/tetsResult/submit`, data),
+  submitTestResult: (data) => put(`${BASE_URL}/exam/testResult/submit`, data),
 };
 
 
+
+// 数据分析API
+const dataAnalysisApi = {
+  // 获取考试结果统计数据
+  getEchartDisplay: () => get('/exam/testResult/getDisplay')
+};
 
 // 导出所有API
 export default {
@@ -160,4 +166,5 @@ export default {
   questionBankApi,
   examApi,
   testResultApi,
+  dataAnalysisApi,
 };
