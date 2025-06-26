@@ -11,6 +11,15 @@
           <n-space>
             <span>总分: {{ examInfo.totalScore || 100 }}分</span>
             <span>题目数: {{ questions.length }}</span>
+            <n-tag type="info" size="small" v-if="examStarted">
+              <n-icon style="margin-right: 4px;">
+                <svg viewBox="0 0 24 24" width="12" height="12">
+                  <path fill="currentColor"
+                    d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z" />
+                </svg>
+              </n-icon>
+              自动保存中
+            </n-tag>
             <n-countdown :duration="remainingTime" :active="examStarted" :precision="1" @finish="autoSubmitExam">
               <template #default="{ hours, minutes, seconds }">
                 <n-tag type="warning" size="large">
@@ -162,9 +171,10 @@ import {
   NTag,
   NSpin,
   NResult,
-  NModal
+  NModal,
+  NIcon
 } from 'naive-ui';
-import { examApi } from '@/api/index.js';
+import { examApi, testResultApi } from '@/api/index.js';
 
 const router = useRouter();
 const route = useRoute();
@@ -198,6 +208,8 @@ const examResult = ref(null);
 const startTime = ref(Date.now());
 const remainingTime = ref(120 * 60 * 1000); // 默认120分钟
 const countdownTimer = ref(null); // 倒计时定时器
+const autoSaveTimer = ref(null); // 自动保存定时器
+const autoSaveInterval = 30000; // 自动保存间隔，30秒
 
 // 从路由参数获取考试信息
 const initExamInfo = () => {
@@ -300,13 +312,16 @@ const loadQuestions = async () => {
       // 清空原数据
       questions.splice(0, questions.length);
       // 添加新数据
+      console.log('题目数据:', response.data, userAnswers);
       response.data.forEach(question => {
         questions.push(question);
         // 初始化答案
         if (question.type === 0 || question.type === 1) {
-          userAnswers[question.id] = null;
+          // 选择题和判断题需要将数字转换为字符串以匹配n-radio的value类型
+          userAnswers[question.id] = question.stuAnswerOption !== null && question.stuAnswerOption !== undefined 
+            ? String(question.stuAnswerOption) : null;
         } else {
-          userAnswers[question.id] = '';
+          userAnswers[question.id] = question.stuAnswer || '';
         }
       });
 
@@ -371,13 +386,110 @@ const unansweredCount = computed(() => {
   }).length;
 });
 
-// 保存答案
+// 启动自动保存
+const startAutoSave = () => {
+  // 清除之前的定时器
+  if (autoSaveTimer.value) {
+    clearInterval(autoSaveTimer.value);
+  }
+
+  // 设置自动保存定时器
+  autoSaveTimer.value = setInterval(() => {
+    autoSaveAnswers();
+  }, autoSaveInterval);
+};
+
+// 停止自动保存
+const stopAutoSave = () => {
+  if (autoSaveTimer.value) {
+    clearInterval(autoSaveTimer.value);
+    autoSaveTimer.value = null;
+  }
+};
+
+// 自动保存答案（静默保存，不显示成功消息）
+const autoSaveAnswers = async () => {
+  try {
+    // 检查是否有答案需要保存
+    const hasAnswers = Object.values(userAnswers).some(answer =>
+      answer !== null && answer !== undefined && answer !== ''
+    );
+
+    if (!hasAnswers || !examStarted.value) {
+      return; // 没有答案或考试已结束，不需要保存
+    }
+
+    // 构建符合后端TestResult格式的数据
+    const answerData = questions.map(question => ({
+      id: question.id,
+      title: question.title,
+      type: question.type,
+      level: question.level,
+      content: question.content,
+      answer: question.answer,
+      answerOption: question.answerOption,
+      explanation: question.explanation,
+      // 学生答案
+      stuAnswer: question.type === 2 ? userAnswers[question.id] || '' : null,
+      stuAnswerOption: (question.type === 0 || question.type === 1) ?
+        (userAnswers[question.id] !== null ? parseInt(userAnswers[question.id]) : null) : null
+    }));
+
+    const testResult = {
+      testId: examInfo.id,
+      studentId: null, // 从用户信息中获取，这里暂时为null
+      status: 0, // 0表示进行中，1表示已提交
+      startTime: examInfo.startTime?.toISOString(),
+      endTime: null, // 保存时还未结束
+      score: null, // 保存时还未评分
+      content: JSON.stringify(answerData) // 将答题情况转换为JSON字符串
+    };
+
+    await testResultApi.updateTestResult(testResult);
+    console.log('自动保存成功');
+  } catch (error) {
+    console.error('自动保存失败:', error);
+  }
+};
+
+// 手动保存答案
 const saveAnswers = async () => {
   try {
     saving.value = true;
-    // 这里可以调用保存答案的API
-    // await examApi.saveAnswers({ examId: examInfo.id, answers: userAnswers });
-    message.success('答案已保存');
+
+    // 构建符合后端TestResult格式的数据
+    const answerData = questions.map(question => ({
+      id: question.id,
+      title: question.title,
+      type: question.type,
+      level: question.level,
+      content: question.content,
+      answer: question.answer,
+      answerOption: question.answerOption,
+      explanation: question.explanation,
+      // 学生答案
+      stuAnswer: question.type === 2 ? userAnswers[question.id] || '' : null,
+      stuAnswerOption: (question.type === 0 || question.type === 1) ?
+        (userAnswers[question.id] !== null ? parseInt(userAnswers[question.id]) : null) : null
+    }));
+
+    const testResult = {
+      testId: examInfo.id,
+      studentId: null, // 从用户信息中获取，这里暂时为null
+      status: 0, // 0表示进行中，1表示已提交
+      startTime: examInfo.startTime?.toISOString(),
+      endTime: null, // 保存时还未结束
+      score: null, // 保存时还未评分
+      content: JSON.stringify(answerData) // 将答题情况转换为JSON字符串
+    };
+
+    const response = await testResultApi.updateTestResult(testResult);
+
+    if (response.code === 200) {
+      message.success('答案已保存');
+    } else {
+      message.error(response.message || '保存答案失败');
+    }
   } catch (error) {
     console.error('保存答案失败:', error);
     message.error('保存答案失败');
@@ -397,26 +509,53 @@ const confirmSubmit = async () => {
     submitting.value = true;
     showSubmitModal.value = false;
 
-    // 这里调用提交考试的API
-    // const response = await examApi.submitExam({ 
-    //   examId: examInfo.id, 
-    //   answers: userAnswers,
-    //   duration: Math.floor((Date.now() - startTime.value) / 1000)
-    // });
+    // 停止自动保存
+    stopAutoSave();
 
-    // 模拟提交结果
-    const score = Math.floor(Math.random() * 41) + 60; // 随机生成60-100的分数
-    examResult.value = {
-      examId: examInfo.id,
-      title: examInfo.title,
-      score,
-      totalScore: examInfo.totalScore,
-      submittedAt: new Date()
+    // 构建符合后端TestResult格式的提交数据
+    const answerData = questions.map(question => ({
+      id: question.id,
+      title: question.title,
+      type: question.type,
+      level: question.level,
+      content: question.content,
+      answer: question.answer,
+      answerOption: question.answerOption,
+      explanation: question.explanation,
+      // 学生答案
+      stuAnswer: question.type === 2 ? userAnswers[question.id] || '' : null,
+      stuAnswerOption: (question.type === 0 || question.type === 1) ?
+        (userAnswers[question.id] !== null ? parseInt(userAnswers[question.id]) : null) : null
+    }));
+
+    const testResult = {
+      testId: examInfo.id,
+      studentId: null, // 从用户信息中获取，这里暂时为null
+      status: 1, // 1表示已提交
+      startTime: examInfo.startTime?.toISOString(),
+      endTime: new Date().toISOString(), // 提交时的结束时间
+      score: null, // 提交时还未评分，由后端计算
+      content: JSON.stringify(answerData) // 将答题情况转换为JSON字符串
     };
 
-    examStarted.value = false;
-    showResultModal.value = true;
-    message.success('考试提交成功');
+    // 调用提交考试的API
+    const response = await testResultApi.submitTestResult(testResult);
+
+    if (response.code === 200) {
+      examResult.value = {
+        examId: examInfo.id,
+        title: examInfo.title,
+        score: response.data || 0, // 后端直接返回分数整数值
+        totalScore: examInfo.totalScore,
+        submittedAt: new Date()
+      };
+
+      examStarted.value = false;
+      showResultModal.value = true;
+      message.success('考试提交成功');
+    } else {
+      message.error(response.message || '提交考试失败');
+    }
 
   } catch (error) {
     console.error('提交考试失败:', error);
@@ -463,6 +602,9 @@ onMounted(() => {
   initExamInfo();
   loadQuestions();
 
+  // 启动自动保存
+  startAutoSave();
+
   // 添加页面离开前的确认
   window.addEventListener('beforeunload', handleBeforeUnload);
 });
@@ -474,6 +616,9 @@ onBeforeUnmount(() => {
     clearInterval(countdownTimer.value);
     countdownTimer.value = null;
   }
+
+  // 停止自动保存
+  stopAutoSave();
 
   window.removeEventListener('beforeunload', handleBeforeUnload);
 });

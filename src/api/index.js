@@ -55,7 +55,8 @@ export const chatApi = {
 export const examApi = {
   // 查询考试列表
   getExams: (params) => get(`${BASE_URL}/exam/tests/query`, params),
-  
+  // 获取考试列表（管理员）
+  getExamsAdmin: (params) => get(`${BASE_URL}/exam/tests/queryAdmin`, params),
   // 新增考试
   addExam: (data) => post(`${BASE_URL}/exam/tests/add`, data),
   
@@ -140,6 +141,12 @@ export const testResultApi = {
     if (keyWord) params.keyWord = keyWord;
     return get(`${BASE_URL}/exam/tetsResult/query`, params);
   },
+  
+  // 保存考试结果
+  updateTestResult: (data) => put(`${BASE_URL}/exam/tetsResult/update`, data),
+  
+  // 提交考试结果
+  submitTestResult: (data) => put(`${BASE_URL}/exam/tetsResult/submit`, data),
 };
 
 

@@ -67,7 +67,7 @@
                                         <n-gi>
                                             <n-statistic label="用时百分比">
                                                 {{ Math.round((selectedExam.timeUsed || 0) /
-                                                    (selectedExam.durationMinutes || 1) * 100) }}%
+                                                    (selectedExam.durationMinutes / 100000)) }}%
                                             </n-statistic>
                                         </n-gi>
                                     </n-grid>
@@ -78,7 +78,8 @@
                             <div class="question-type-analysis">
                                 <h3>题型分析</h3>
                                 <n-card>
-                                    <n-data-table :columns="questionTypeColumns" :data="computedQuestionTypeAnalysis"
+                                    <n-data-table :columns="questionTypeColumns"
+                                        :data="computedQuestionTypeAnalysis.filter(item => item.type !== '简答题')"
                                         :bordered="false" :pagination="false" />
                                 </n-card>
                             </div>
@@ -98,17 +99,15 @@
                                                 </div>
 
                                                 <!-- 选择题选项 -->
-                                                <div v-if="(question.type === 0 || question.questionType === 0 || question.qType === 0) && question.options && Array.isArray(question.options)"
+                                                <!-- <div v-if="(question.type === 0) && question.options && Array.isArray(question.options)"
                                                     class="question-options">
                                                     <strong>选项:</strong>
                                                     <div v-for="(option, optionIndex) in question.options"
                                                         :key="optionIndex" class="option-item">
                                                         {{ ['A', 'B', 'C', 'D'][optionIndex] }}. {{ option }}
                                                     </div>
-                                                </div>
-
-                                                <n-divider />
-
+                                                </div> -->
+                                                <!-- <n-divider /> -->
                                                 <div class="answer-details">
                                                     <n-space vertical>
                                                         <div>
@@ -130,13 +129,14 @@
                                                             <strong>解析:</strong>
                                                             <p>{{ question.explanation }}</p>
                                                         </div>
-                                                        <div>
+                                                        <!-- 简答题不显示答题状态和难度等级 -->
+                                                        <div v-if="question.type !== 2">
                                                             <strong>答题状态:</strong>
                                                             <n-tag :type="question.isCorrect ? 'success' : 'error'">
                                                                 {{ question.isCorrect ? '正确' : '错误' }}
                                                             </n-tag>
                                                         </div>
-                                                        <div v-if="question.level !== undefined">
+                                                        <div v-if="question.level !== undefined && question.type !== 2">
                                                             <strong>难度等级:</strong>
                                                             <n-tag
                                                                 :type="question.level === 0 ? 'success' : question.level === 1 ? 'warning' : 'error'">
@@ -291,7 +291,7 @@ const columns = [
         title: '用时',
         key: 'usedTime',
         render(row) {
-            const usedMinutes = Math.round((row.timeUsed || 0) / 60000);
+            const usedMinutes = Math.round((row.timeUsed || 0) / 60);
             const totalMinutes = Math.round((row.durationMinutes || 0) / 60000);
             return `${usedMinutes}/${totalMinutes} 分钟`;
         }
@@ -544,7 +544,6 @@ const viewExamDetail = async (exam) => {
         if (foundExam) {
             // 直接使用找到的考试数据，content字段已经是JSON字符串格式
             selectedExam.value = foundExam;
-            console.log('selectedExam content:', foundExam.content);
         } else {
             message.error('未找到对应的考试记录');
             selectedExam.value = null;
@@ -625,38 +624,44 @@ const formatAnswer = (type, question = null, isRight) => {
     if (!isRight) { // 显示正确答案
         const answer = question.answer;
         const answerOption = question.answerOption;
-        if (!answer && !answerOption) return '无';
+        if (answer === undefined && answerOption === undefined) return '无';
 
         // 处理新的题型编号
         if (type === 0) { // 选择题
             // 如果有题目对象且包含选项，显示选项内容
-            if (answerOption) {
+            if (answerOption !== undefined) {
                 const options = ['A', 'B', 'C', 'D'];
                 return `${options[answerOption]}`;
             }
             return '未知';
         } else if (type === 1) { // 判断题
-            return answerOption === 0 ? '正确' : answerOption === 1 ? '错误' : answerOption;
+            if (answerOption !== undefined) {
+                return answerOption === 0 ? '正确' : '错误';
+            }
+            return '未知';
         } else if (type === 2) { // 简答题
-            return answer;
+            return answer || '无';
         }
     } else { // 显示用户答案
         const answer = question.stuAnswer;
         const answerOption = question.stuAnswerOption;
-        if (!answer && !answerOption) return '未作答';
+        if (answer === undefined && answerOption === undefined) return '未作答';
 
         // 处理新的题型编号
         if (type === 0) { // 选择题
             // 如果有题目对象且包含选项，显示选项内容
-            if (answerOption) {
+            if (answerOption !== undefined) {
                 const options = ['A', 'B', 'C', 'D'];
                 return `${options[answerOption]}`;
             }
-            return '未知';
+            return '未作答';
         } else if (type === 1) { // 判断题
-            return answerOption === 0 ? '正确' : answerOption === 1 ? '错误' : answerOption;
+            if (answerOption !== undefined) {
+                return answerOption === 0 ? '正确' : '错误';
+            }
+            return '未作答';
         } else if (type === 2) { // 简答题
-            return answer;
+            return answer || '未作答';
         }
     }
     return '未知';

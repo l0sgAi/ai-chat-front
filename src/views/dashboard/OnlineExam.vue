@@ -59,7 +59,7 @@
                             {{ selectedExam.name }}
                         </n-descriptions-item>
                         <n-descriptions-item label="考试时长">
-                            {{ selectedExam.durationMinutes }} 分钟
+                            {{ Math.round(selectedExam.durationMinutes / 60000) }} 分钟
                         </n-descriptions-item>
                         <n-descriptions-item label="开始时间">
                             {{ formatDate(selectedExam.startTime) }}
@@ -245,7 +245,7 @@ const columns = [
             const now = new Date().getTime();
             const startTime = new Date(row.startTime).getTime();
             const endTime = new Date(row.endTime).getTime();
-            
+
             let status, color;
             if (now < startTime) {
                 status = '未开始';
@@ -257,7 +257,7 @@ const columns = [
                 status = '已结束';
                 color = '#F56C6C'; // 红色
             }
-            
+
             return h('div', {
                 style: 'display: flex; align-items: center; gap: 6px;'
             }, [
@@ -322,12 +322,18 @@ const columns = [
 const loadExamList = async () => {
     try {
         loading.value = true;
-        const response = await examApi.queryExams(
-            searchKeyword.value,
-            selectedStatus.value,
-            pagination.page,
-            pagination.pageSize
-        );
+        const params = {
+            pageNum: pagination.page,
+            pageSize: pagination.pageSize
+        };
+        if (searchKeyword.value) {
+            params.keyWord = searchKeyword.value;
+        }
+        if (selectedStatus.value !== null && selectedStatus.value !== undefined) {
+            params.status = selectedStatus.value;
+        }
+        
+        const response = await examApi.getExamsAdmin(params);
 
         if (response.code === 200) {
             examList.value = response.data || [];
