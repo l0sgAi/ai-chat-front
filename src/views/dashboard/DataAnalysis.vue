@@ -27,7 +27,7 @@
                                 <span>参与人数</span>
                             </n-space>
                         </template>
-                        <div class="stat-value">{{ statistics.totalStudents }}</div>
+                        <div class="stat-value" :class="{ 'animating': isAnimating }">{{ animatedStats.totalStudents }}</div>
                         <div class="stat-desc">考试参与总人数</div>
                     </n-card>
                 </n-grid-item>
@@ -41,7 +41,7 @@
                                 <span>平均分数</span>
                             </n-space>
                         </template>
-                        <div class="stat-value">{{ statistics.averageScore.toFixed(1) }}</div>
+                        <div class="stat-value" :class="{ 'animating': isAnimating }">{{ animatedStats.averageScore.toFixed(1) }}</div>
                         <div class="stat-desc">所有参与者平均得分</div>
                     </n-card>
                 </n-grid-item>
@@ -55,7 +55,7 @@
                                 <span>通过率</span>
                             </n-space>
                         </template>
-                        <div class="stat-value">{{ statistics.passRate.toFixed(1) }}%</div>
+                        <div class="stat-value" :class="{ 'animating': isAnimating }">{{ animatedStats.passRate.toFixed(1) }}%</div>
                         <div class="stat-desc">60分及以上通过率</div>
                     </n-card>
                 </n-grid-item>
@@ -69,7 +69,7 @@
                                 <span>平均用时</span>
                             </n-space>
                         </template>
-                        <div class="stat-value">{{ statistics.averageTime }}分钟</div>
+                        <div class="stat-value" :class="{ 'animating': isAnimating }">{{ animatedStats.averageTime }}分钟</div>
                         <div class="stat-desc">所有参与者平均用时</div>
                     </n-card>
                 </n-grid-item>
@@ -201,6 +201,17 @@ const statistics = reactive({
     passRate: 0,
     averageTime: 0
 });
+
+// 动画显示的数据
+const animatedStats = reactive({
+    totalStudents: 0,
+    averageScore: 0,
+    passRate: 0,
+    averageTime: 0
+});
+
+// 动画状态
+const isAnimating = ref(false);
 
 // 学生排名数据
 const studentRankData = ref([]);
@@ -362,6 +373,64 @@ const processData = () => {
     updateFilterOptions();
 };
 
+// 数字动画函数
+const animateNumber = (start, end, duration, callback, onComplete) => {
+    const startTime = performance.now();
+    const animate = (currentTime) => {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // 使用缓动函数，让动画更自然
+        const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+        const current = start + (end - start) * easeOutQuart;
+        
+        callback(current);
+        
+        if (progress < 1) {
+            requestAnimationFrame(animate);
+        } else if (onComplete) {
+            onComplete();
+        }
+    };
+    requestAnimationFrame(animate);
+};
+
+// 启动统计数据动画
+const startStatsAnimation = () => {
+    const duration = 1500; // 动画持续时间1.5秒
+    isAnimating.value = true;
+    
+    let completedAnimations = 0;
+    const totalAnimations = 4;
+    
+    const onAnimationComplete = () => {
+        completedAnimations++;
+        if (completedAnimations === totalAnimations) {
+            isAnimating.value = false;
+        }
+    };
+    
+    // 参与人数动画
+    animateNumber(animatedStats.totalStudents, statistics.totalStudents, duration, (value) => {
+        animatedStats.totalStudents = Math.round(value);
+    }, onAnimationComplete);
+    
+    // 平均分数动画
+    animateNumber(animatedStats.averageScore, statistics.averageScore, duration, (value) => {
+        animatedStats.averageScore = value;
+    }, onAnimationComplete);
+    
+    // 通过率动画
+    animateNumber(animatedStats.passRate, statistics.passRate, duration, (value) => {
+        animatedStats.passRate = value;
+    }, onAnimationComplete);
+    
+    // 平均用时动画
+    animateNumber(animatedStats.averageTime, statistics.averageTime, duration, (value) => {
+        animatedStats.averageTime = Math.round(value);
+    }, onAnimationComplete);
+};
+
 // 计算统计数据
 const calculateStatistics = () => {
     const data = getFilteredData();
@@ -373,6 +442,9 @@ const calculateStatistics = () => {
         Math.round(data.filter(item => item.score >= 60).length / data.length * 1000) / 10 : 0;
     statistics.averageTime = data.length > 0 ?
         Math.round(data.reduce((sum, item) => sum + item.timeUsed, 0) / data.length / 60) : 0;
+    
+    // 启动动画
+    startStatsAnimation();
 };
 
 // 处理学生排名数据
@@ -943,6 +1015,24 @@ onMounted(() => {
     font-weight: bold;
     margin: 10px 0;
     color: #2080f0;
+    transition: all 0.3s ease;
+    font-family: 'Arial', monospace;
+    position: relative;
+}
+
+.stat-value.animating {
+    color: #1890ff;
+    transform: scale(1.05);
+}
+
+/* 卡片悬停效果增强 */
+.data-analysis-card .n-card {
+    transition: all 0.3s ease;
+}
+
+.data-analysis-card .n-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
 .stat-desc {

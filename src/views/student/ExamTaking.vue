@@ -224,6 +224,8 @@ const examResult = ref(null);
 // 防作弊相关
 const devToolsOpen = ref(false);
 const devToolsTimer = ref(null);
+const pageHidden = ref(false);
+const pageVisibilityTimer = ref(null);
 
 // 计时相关
 const startTime = ref(Date.now());
@@ -292,21 +294,15 @@ const startCountdown = () => {
   }, 1000);
 };
 
-// 检测开发者工具是否打开
+// 检测开发者工具是否打开（优化后的检测方法）
 const detectDevTools = () => {
-  const threshold = 160; // 检测阈值
-  
-  // 方法1: 检测窗口尺寸变化
-  const widthThreshold = window.outerWidth - window.innerWidth > threshold;
-  const heightThreshold = window.outerHeight - window.innerHeight > threshold;
-  
-  // 方法2: 检测console.log的执行时间
+  // 方法1: 检测console.log的执行时间（更准确的方法）
   let start = performance.now();
   console.log('%c', 'color: transparent');
   let end = performance.now();
   const consoleTime = end - start;
   
-  // 方法3: 检测debugger语句
+  // 方法2: 检测debugger语句
   let debuggerDetected = false;
   try {
     const before = performance.now();
@@ -317,7 +313,42 @@ const detectDevTools = () => {
     // debugger被阻止
   }
   
-  return widthThreshold || heightThreshold || consoleTime > 1 || debuggerDetected;
+  // 方法3: 检测窗口尺寸变化（提高阈值，减少误判）
+  const threshold = 200; // 提高检测阈值
+  const widthThreshold = window.outerWidth - window.innerWidth > threshold;
+  const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+  
+  // 只有当console时间明显异常或debugger被触发时才认为是开发者工具
+  return consoleTime > 5 || debuggerDetected || (widthThreshold && heightThreshold);
+};
+
+// 检测页面可见性变化（切换标签页或最小化窗口）
+const handleVisibilityChange = () => {
+  if (!examStarted.value || submitting.value) {
+    return; // 考试未开始或正在提交时不检测
+  }
+  
+  if (document.hidden) {
+    // 页面被隐藏（切换到其他标签页或最小化）
+    pageHidden.value = true;
+    message.warning('检测到页面切换，考试将在5秒后自动提交！');
+    
+    // 给用户5秒时间切换回来
+    pageVisibilityTimer.value = setTimeout(() => {
+      if (document.hidden && examStarted.value && !submitting.value) {
+        message.error('检测到页面切换超时，考试自动提交！');
+        confirmSubmit();
+      }
+    }, 5000);
+  } else {
+    // 页面重新可见
+    if (pageHidden.value && pageVisibilityTimer.value) {
+      clearTimeout(pageVisibilityTimer.value);
+      pageVisibilityTimer.value = null;
+      pageHidden.value = false;
+      message.success('欢迎回到考试页面');
+    }
+  }
 };
 
 // 启动防作弊检测
@@ -326,7 +357,7 @@ const startAntiCheatDetection = () => {
     clearInterval(devToolsTimer.value);
   }
   
-  // 每500ms检测一次
+  // 每1秒检测一次开发者工具（降低检测频率）
   devToolsTimer.value = setInterval(() => {
     if (!examStarted.value || submitting.value) {
       return; // 考试未开始或正在提交时不检测
@@ -345,7 +376,10 @@ const startAntiCheatDetection = () => {
         }
       }, 1000);
     }
-  }, 500);
+  }, 1000);
+  
+  // 添加页面可见性检测
+  document.addEventListener('visibilitychange', handleVisibilityChange);
 };
 
 // 停止防作弊检测
@@ -354,10 +388,20 @@ const stopAntiCheatDetection = () => {
     clearInterval(devToolsTimer.value);
     devToolsTimer.value = null;
   }
+  
+  if (pageVisibilityTimer.value) {
+    clearTimeout(pageVisibilityTimer.value);
+    pageVisibilityTimer.value = null;
+  }
+  
+  // 移除页面可见性检测
+  document.removeEventListener('visibilitychange', handleVisibilityChange);
 };
 
-// 禁用开发者工具快捷键
+// 优化后的快捷键禁用（只禁用开发者工具相关）
 const disableDevToolsShortcuts = (event) => {
+  // 只禁用开发者工具相关快捷键
+  
   // 禁用F12
   if (event.keyCode === 123) {
     event.preventDefault();
@@ -386,23 +430,16 @@ const disableDevToolsShortcuts = (event) => {
     return false;
   }
   
-  // 禁用Ctrl+U (查看源代码)
-  if (event.ctrlKey && event.keyCode === 85) {
-    event.preventDefault();
-    message.warning('禁止查看源代码！');
-    return false;
-  }
-  
-  // 禁用Ctrl+S (保存页面)
-  if (event.ctrlKey && event.keyCode === 83) {
-    event.preventDefault();
-    message.warning('禁止保存页面！');
-    return false;
-  }
+  // 移除对Ctrl+U和Ctrl+S的禁用，允许正常的页面操作
 };
 
-// 禁用右键菜单
+// 优化后的右键菜单处理（允许在输入框中使用）
 const disableContextMenu = (event) => {
+  // 如果是在输入框或文本域中，允许右键菜单
+  if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+    return true;
+  }
+  
   event.preventDefault();
   message.warning('考试期间禁止使用右键菜单！');
   return false;
@@ -765,7 +802,7 @@ const goBackToList = () => {
   router.push('/student/exam-list');
 };
 
-// 页面离开前的确认
+// 页面离开前的确认（优化提示信息）
 const handleBeforeUnload = (event) => {
   if (examStarted.value || submitting.value) {
     event.preventDefault();
@@ -773,8 +810,9 @@ const handleBeforeUnload = (event) => {
       event.returnValue = '考试正在提交中，请不要离开页面！';
       return '考试正在提交中，请不要离开页面！';
     } else {
-      event.returnValue = '考试正在进行中，确定要离开吗？';
-      return '考试正在进行中，确定要离开吗？';
+      // 刷新页面不会触发作弊检测，只是提醒用户
+      event.returnValue = '考试正在进行中，刷新页面不会影响考试，但建议不要离开。';
+      return '考试正在进行中，刷新页面不会影响考试，但建议不要离开。';
     }
   }
 };
