@@ -27,23 +27,39 @@ export const userApi = {
  * 聊天相关API
  */
 export const chatApi = {
-  // 获取会话列表
-  getConversations: () => get(`/chat/conversations`),
-  
-  // 创建新会话
-  createConversation: (data) => post(`/chat/conversation`, data),
-  
-  // 获取指定会话的消息
-  getMessages: (conversationId) => get(`/chat/messages`, { conversationId }),
-  
   // 发送消息
   sendMessage: (data) => post(`/chat/send`, data),
   
-  // 删除会话
-  deleteConversation: (conversationId) => del(`/chat/conversation`, { conversationId }),
+  // 创建SSE连接获取流式响应
+  createSSEConnection: (sessionId) => {
+    const baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
+    const tokenName = localStorage.getItem('tokenName');
+    const tokenValue = localStorage.getItem('tokenValue');
+    
+    let url = `${baseURL}/chat/stream/${sessionId}`;
+    
+    // 如果有token，添加到URL参数中
+    if (tokenName && tokenValue) {
+      url += `?${tokenName}=${encodeURIComponent(tokenValue)}`;
+    }
+    
+    console.log('SSE连接URL:', url); // 添加调试日志
+    return new EventSource(url);
+  },
+};
+
+/**
+ * 会话管理相关API
+ */
+export const sessionApi = {
+  // 添加会话
+  addSession: (data) => post(`/session/add`, data),
   
-  // 重命名会话
-  renameConversation: (conversationId, title) => put(`/chat/conversation`, { conversationId, title }),
+  // 查询会话列表（支持关键字搜索）
+  selectSessions: (keyword) => get(`/session/select`, keyword ? { keyword } : {}),
+  
+  // 删除会话
+  deleteSession: (id) => del(`/session/delete`, { id }),
 };
 
 /**
@@ -61,5 +77,6 @@ export const systemApi = {
 export default {
   userApi,
   chatApi,
+  sessionApi,
   systemApi,
 };

@@ -5,7 +5,7 @@
             <n-layout-sider bordered content-style="padding: 0;" class="chat-sidebar">
                 <div class="sidebar-header">
                     <span class="sidebar-title">会话列表</span>
-                    <n-button quaternary circle @click="createNewConversation">
+                    <n-button quaternary circle @click="prepareNewConversation">
                         <template #icon>
                             <n-icon><add-outline /></n-icon>
                         </template>
@@ -13,27 +13,33 @@
                 </div>
 
                 <div class="conversation-list">
-                    <template v-if="conversations.length > 0">
+                    <template v-if="loading">
+                        <div class="loading-container">
+                            <n-spin size="small" />
+                            <span>加载中...</span>
+                        </div>
+                    </template>
+                    <template v-else-if="conversations.length > 0">
                         <div v-for="conv in conversations" :key="conv.id"
                             :class="['conversation-item', activeConversationId === conv.id ? 'active' : '']"
                             @click="switchConversation(conv.id)">
-                            <n-space justify="space-between" align="center">
-                                <n-space vertical size="small" style="width: 80%">
-                                    <div class="conversation-title">
-                                        <n-space align="center">
-                                            <n-icon><chatbubble-outline /></n-icon>
-                                            {{ conv.title }}
+                            <n-space justify="space-between" align="left">
+                                <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
+                                    <div class="conversation-title" :title="conv.originalTitle">
+                                        <n-space align="left" :wrap="false" size="small" style="flex: 1; min-width: 0;">
+                                            <n-icon style="flex-shrink: 0;"><chatbubble-outline /></n-icon>
+                                            <n-icon v-if="conv.isFavorite" color="#f39c12" style="flex-shrink: 0;">
+                                                <star />
+                                            </n-icon>
+                                            <span
+                                                style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;">{{
+                                                    conv.title }}</span>
                                         </n-space>
                                     </div>
                                     <div class="conversation-time">
-                                        <n-space align="center" size="small">
-                                            <span class="conversation-preview">
-                                                {{ conv.lastMessage || '无消息' }}
-                                            </span>
-                                            <n-time :time="conv.time" format="yyyy-MM-dd HH:mm" />
-                                        </n-space>
+                                        <n-time :time="conv.time" format="MM-dd HH:mm" />
                                     </div>
-                                </n-space>
+                                </div>
 
                                 <n-dropdown :options="conversationOptions"
                                     @select="(key) => handleConversationAction(key, conv.id)">
@@ -46,7 +52,7 @@
                             </n-space>
                         </div>
                     </template>
-                    <n-empty v-else description="暂无会话" />
+                    <n-empty :show-icon="false" v-else description="暂无会话" />
                 </div>
             </n-layout-sider>
 
@@ -55,7 +61,9 @@
                 <!-- 聊天头部 -->
                 <n-layout-header bordered class="chat-header">
                     <div class="chat-title">
-                        {{ conversations.find(conv => conv.id === activeConversationId)?.title || 'AI聊天' }}
+                        {{activeConversationId ? conversations.find(conv => conv.id === activeConversationId)?.title ||
+                            'AI聊天' :
+                            'AI聊天'}}
                     </div>
                     <n-button @click="logout" type="error" secondary>
                         <template #icon>
@@ -74,8 +82,15 @@
                                 <div class="message-header">
                                     <span class="sender">{{ msg.sender }}</span>
                                     <span class="time">{{ msg.time }}</span>
+
                                 </div>
-                                <div class="message-content">{{ msg.content }}</div>
+                                <div class="message-content markdown-body" v-html="formatMessageContent(msg.content)">
+                                </div>
+                                <div v-if="msg.isStreaming && !msg.content" class="typing-indicator">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                </div>
                             </div>
                         </div>
                         <div class="bottom-spacer-static"></div>
@@ -101,8 +116,8 @@
 </template>
 
 <script setup>
-import { userApi, chatApi } from '../api';
-import { ref, onMounted } from 'vue';
+import { userApi, chatApi, sessionApi } from '../api';
+import { ref, onMounted, nextTick, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMessage, darkTheme } from 'naive-ui';
 import { h } from 'vue';
@@ -119,7 +134,8 @@ import {
     NSpace,
     NIcon,
     NDropdown,
-    NEmpty
+    NEmpty,
+    NSpin
 } from 'naive-ui';
 import {
     ChatbubbleOutline,
@@ -128,35 +144,84 @@ import {
     LogOutOutline,
     EllipsisHorizontalOutline,
     TrashOutline,
-    CreateOutline
+    CreateOutline,
+    Star
 } from '@vicons/ionicons5';
+import { marked } from 'marked';
+import hljs from 'highlight.js';
 
 // 引入独立的CSS文件
 import '../assets/css/chat.css';
+import 'github-markdown-css/github-markdown.css';
+import 'highlight.js/styles/github.css';
 
 const router = useRouter();
 const message = useMessage();
 const messages = ref([]);
 const newMessage = ref('');
 const username = ref('用户');
-const activeConversationId = ref(1);
+const activeConversationId = ref(null);
 
-// 模拟会话列表数据
-const conversations = ref([
-    { id: 1, title: '测试会话', lastMessage: '初始会话', time: new Date(), messages: [] },
-    // { id: 2, title: '编程问题咨询', lastMessage: '请问如何优化这段代码？', time: new Date(Date.now() - 3600000), messages: [] },
-    // { id: 3, title: '旅行计划建议', lastMessage: '我想去欧洲旅行，有什么建议？', time: new Date(Date.now() - 86400000), messages: [] },
-]);
+// 会话列表数据
+const conversations = ref([]);
+const loading = ref(false);
 
-// 模拟一些初始消息
+// 截断标题到最长12个字符
+const truncateTitle = (title) => {
+    if (!title) return '新会话';
+    return title.length > 12 ? title.substring(0, 12) + '...' : title;
+};
+
+// 截断摘要到最长20个字符
+const truncateSummary = (summary) => {
+    if (!summary) return '无消息';
+    return summary.length > 20 ? summary.substring(0, 20) + '...' : summary;
+};
+
+// 加载会话列表
+const loadConversations = async () => {
+    try {
+        loading.value = true;
+        const response = await sessionApi.selectSessions();
+        if (response.code === 200) {
+            conversations.value = response.data.map(session => ({
+                id: session.id,
+                title: truncateTitle(session.title),
+                lastMessage: truncateSummary(session.summary),
+                time: new Date(session.lastMessageTime || session.createdTime),
+                messages: [],
+                originalTitle: session.title, // 保存原始标题用于显示完整信息
+                originalSummary: session.summary, // 保存原始摘要
+                isFavorite: session.isFavorite,
+                tags: session.tags
+            }));
+        } else {
+            message.error(`加载会话失败: ${response.message}`);
+        }
+    } catch (error) {
+        message.error(`加载会话失败: ${error.message}`);
+    } finally {
+        loading.value = false;
+    }
+};
+
+// 自动滚动到底部
+const scrollToBottom = async () => {
+    await nextTick();
+    const chatMessages = document.querySelector('.chat-messages');
+    if (chatMessages) {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+};
+
+// 监听消息变化，自动滚动到底部
+watch(messages, () => {
+    scrollToBottom();
+}, { deep: true });
+
+// 组件挂载时加载会话列表
 onMounted(() => {
-    // 为第一个会话添加消息
-    // conversations.value[0].messages = [
-    //     { id: 1, sender: 'AI助手', content: '你好！我是AI助手，有什么可以帮到你的吗？', time: new Date().toLocaleTimeString() },
-    // ];
-
-    // 设置当前消息列表为活跃会话的消息
-    messages.value = conversations.value.find(conv => conv.id === activeConversationId.value)?.messages || [];
+    loadConversations();
 });
 
 // 切换会话
@@ -171,24 +236,61 @@ const switchConversation = (convId) => {
     activeConversationId.value = convId;
     const newConv = conversations.value.find(conv => conv.id === convId);
     if (newConv) {
-        messages.value = [...newConv.messages];
+        messages.value = [...(newConv.messages || [])];
+    } else {
+        messages.value = [];
     }
 };
 
-// 创建新会话
-const createNewConversation = () => {
-    const newId = Date.now();
-    const newConversation = {
-        id: newId,
-        title: `新会话 ${conversations.value.length + 1}`,
-        lastMessage: '',
-        time: new Date(),
-        messages: []
-    };
+// 准备新会话状态（不立即创建）
+const prepareNewConversation = () => {
+    // 取消当前选中的会话
+    activeConversationId.value = null;
+    // 清空消息列表
+    messages.value = [];
+};
 
-    conversations.value.unshift(newConversation);
-    switchConversation(newId);
-    message.success('已创建新会话');
+// 创建新会话（实际创建）
+const createNewConversation = async (firstQuestion = null) => {
+    try {
+        loading.value = true;
+        const sessionData = {
+            title: firstQuestion ? truncateTitle(firstQuestion) : `新会话 ${conversations.value.length + 1}`,
+            isFavorite: 0,
+            modelId: 1, // 默认模型ID
+            tags: '',
+            summary: ''
+        };
+
+        const response = await sessionApi.addSession(sessionData);
+        if (response.code === 200) {
+            const newId = response.data; // 后端返回插入的id
+            const newConversation = {
+                id: newId,
+                title: sessionData.title,
+                lastMessage: '',
+                time: new Date(),
+                messages: [],
+                originalTitle: firstQuestion || sessionData.title,
+                originalSummary: '',
+                isFavorite: 0,
+                tags: ''
+            };
+
+            conversations.value.unshift(newConversation);
+            activeConversationId.value = newId;
+            message.success('已创建新会话');
+            return newId;
+        } else {
+            message.error(`创建会话失败: ${response.message}`);
+            return null;
+        }
+    } catch (error) {
+        message.error(`创建会话失败: ${error.message}`);
+        return null;
+    } finally {
+        loading.value = false;
+    }
 };
 
 // 会话操作菜单
@@ -205,18 +307,36 @@ const conversationOptions = [
     }
 ];
 
+// 删除会话
+const deleteConversation = async (convId) => {
+    try {
+        loading.value = true;
+        const response = await sessionApi.deleteSession(convId);
+        if (response.code === 200) {
+            conversations.value = conversations.value.filter(conv => conv.id !== convId);
+            if (activeConversationId.value === convId) {
+                if (conversations.value.length > 0) {
+                    switchConversation(conversations.value[0].id);
+                } else {
+                    activeConversationId.value = null;
+                    messages.value = [];
+                }
+            }
+            message.success('会话已删除');
+        } else {
+            message.error(`删除会话失败: ${response.message}`);
+        }
+    } catch (error) {
+        message.error(`删除会话失败: ${error.message}`);
+    } finally {
+        loading.value = false;
+    }
+};
+
 // 处理会话菜单选择
 const handleConversationAction = (key, convId) => {
     if (key === 'delete') {
-        conversations.value = conversations.value.filter(conv => conv.id !== convId);
-        if (activeConversationId.value === convId) {
-            if (conversations.value.length > 0) {
-                switchConversation(conversations.value[0].id);
-            } else {
-                messages.value = [];
-            }
-        }
-        message.success('会话已删除');
+        deleteConversation(convId);
     } else if (key === 'rename') {
         // 这里可以实现重命名功能
         message.info('重命名功能待实现');
@@ -226,57 +346,191 @@ const handleConversationAction = (key, convId) => {
 const sendMessage = async () => {
     if (!newMessage.value.trim()) return;
 
-    // // 添加用户消息
-    // const userMsg = {
-    //     id: Date.now(),
-    //     sender: username.value,
-    //     content: newMessage.value,
-    //     time: new Date().toLocaleTimeString()
-    // };
-    // messages.value.push(userMsg);
-
-    // // 更新当前会话的最后消息和时间
-    // const currentConv = conversations.value.find(conv => conv.id === activeConversationId.value);
-    // if (currentConv) {
-    //     currentConv.lastMessage = userMsg.content;
-    //     currentConv.time = new Date();
-    // }
-
-    // // 模拟AI回复
-    // setTimeout(() => {
-    //     const aiMsg = {
-    //         id: Date.now() + 1,
-    //         sender: 'AI助手',
-    //         content: `我收到了你的消息: "${newMessage.value}"`,
-    //         time: new Date().toLocaleTimeString()
-    //     };
-    //     messages.value.push(aiMsg);
-
-    //     // 更新会话列表中的最后消息
-    //     if (currentConv) {
-    //         currentConv.lastMessage = aiMsg.content;
-    //         currentConv.time = new Date();
-    //     }
-    // }, 1000);
     try {
-        // 调用登录API
-        await chatApi.sendMessage({
-            question: newMessage.value.trim(),
-            modelId: 1
-        }).then((res) => {
-            if (res.code !== 200) {
-                message.error(`错误:${res.message}`);
+        // 如果没有选择会话，先创建新会话
+        if (!activeConversationId.value) {
+            const newSessionId = await createNewConversation(newMessage.value.trim());
+            // 等待会话创建完成后再发送消息
+            if (!newSessionId) {
+                message.error('创建会话失败，无法发送消息');
                 return;
             }
-            message.success('发送成功');
-        })
+        }
+
+        // 添加用户消息到当前会话
+        const userMsg = {
+            id: Date.now(),
+            sender: username.value,
+            content: newMessage.value.trim(),
+            time: new Date().toLocaleTimeString()
+        };
+        messages.value.push(userMsg);
+
+        // 立即清空输入框
+        const messageContent = newMessage.value.trim();
+        newMessage.value = '';
+
+        // 更新当前会话的最后消息和时间
+        const currentConv = conversations.value.find(conv => conv.id === activeConversationId.value);
+        if (currentConv) {
+            currentConv.lastMessage = userMsg.content;
+            currentConv.time = new Date();
+            currentConv.messages = [...messages.value];
+        }
+
+        // 发送消息到后端获取sessionId
+        const response = await chatApi.sendMessage({
+            question: messageContent,
+            sessionId: activeConversationId.value,
+            modelId: 1 // 添加默认模型ID
+        });
+
+        console.log('发送消息API响应:', response); // 添加调试日志
+
+        if (response.code === 200) {
+            const streamSessionId = response.data; // 后端返回的sessionId
+            console.log('获取到streamSessionId:', streamSessionId); // 调试日志
+
+            // 创建AI消息占位符
+            const aiMsg = {
+                id: Date.now() + 1,
+                sender: 'AI助手',
+                content: '',
+                time: new Date().toLocaleTimeString(),
+                isStreaming: true
+            };
+            messages.value.push(aiMsg);
+
+            // 建立SSE连接获取流式响应
+            console.log('准备建立SSE连接...'); // 调试日志
+            const eventSource = chatApi.createSSEConnection(streamSessionId);
+
+            eventSource.onmessage = (event) => {
+                try {
+                    console.log('接收到SSE数据:', event.data); // 调试日志
+                    // 后端直接发送文本内容，不是JSON格式
+                    const text = event.data;
+                    if (text && text.trim()) {
+                        console.log('处理文本内容:', text); // 调试日志
+                        // 确保aiMsg.content是字符串类型，然后累加内容
+                        aiMsg.content = (aiMsg.content || '') + text;
+                        // 触发响应式更新
+                        messages.value = [...messages.value];
+                    }
+                } catch (error) {
+                    console.error('处理SSE数据失败:', error, event);
+                }
+            };
+
+            eventSource.onerror = (error) => {
+                console.error('SSE连接错误:', error);
+                aiMsg.isStreaming = false;
+                eventSource.close();
+
+                // 如果没有接收到任何内容，显示错误信息
+                if (!aiMsg.content) {
+                    aiMsg.content = '抱歉，接收消息时出现错误，请重试。';
+                }
+                // message.error('接收消息流失败');
+            };
+
+            // 监听连接打开事件
+            eventSource.onopen = () => {
+                console.log('SSE连接已建立');
+            };
+
+            // 监听流结束事件
+            eventSource.addEventListener('close', () => {
+                console.log('SSE流已结束');
+                aiMsg.isStreaming = false;
+                eventSource.close();
+
+                // 更新会话列表中的最后消息
+                if (currentConv && aiMsg.content) {
+                    currentConv.lastMessage = aiMsg.content.substring(0, 20) + (aiMsg.content.length > 20 ? '...' : '');
+                    currentConv.time = new Date();
+                    currentConv.messages = [...messages.value];
+                }
+            });
+
+            // 设置超时处理
+            setTimeout(() => {
+                if (aiMsg.isStreaming && !aiMsg.content) {
+                    console.warn('SSE连接超时，未接收到数据');
+                    aiMsg.isStreaming = false;
+                    aiMsg.content = '连接超时，请检查网络或重试。';
+                    eventSource.close();
+                    message.warning('连接超时，请重试');
+                }
+            }, 30000); // 30秒超时
+
+        } else {
+            message.error(`发送失败: ${response.message}`);
+        }
     } catch (error) {
-        // 处理登录失败
-        message.error(`错误:${error}`);
+        message.error(`发送失败: ${error.message}`);
     }
 
     // 清空输入框
     newMessage.value = '';
+};
+
+// 格式化消息内容
+const formatMessageContent = (content) => {
+    if (!content) return '';
+    
+    // 详细的类型检查和调试信息
+    console.log('formatMessageContent 输入类型:', typeof content, '值:', content);
+    
+    // 确保content是字符串类型
+    let contentStr;
+    try {
+        contentStr = typeof content === 'string' ? content : String(content);
+    } catch (stringifyError) {
+        console.error('字符串转换失败:', stringifyError);
+        return '';
+    }
+
+    try {
+        // 处理后端返回的HTML转义字符，转换为Markdown可识别的格式
+        let processedContent = contentStr
+            // 先处理换行符：将<br>转换为真正的换行符
+            .replace(/<br\s*\/?>/gi, '\n')
+            // 处理非断行空格：在代码块中保留，在普通文本中转换为普通空格
+            .replace(/&nbsp;/g, ' ')
+            // 处理其他HTML转义字符
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, '&')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'");
+
+        // 使用marked解析Markdown
+        console.log('格式化消息内容:', processedContent);
+        const html = marked.parse(processedContent);
+        console.log('解析后消息内容:', html);
+        return html;
+    } catch (error) {
+        console.error('Markdown解析失败:', error, '输入内容:', contentStr);
+        // 降级到简单的文本替换
+        try {
+            const fallbackStr = typeof content === 'string' ? content : String(content);
+            return fallbackStr
+                .replace(/<br\s*\/?>/gi, '<br>')
+                .replace(/&nbsp;/g, ' ')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&amp;/g, '&')
+                .replace(/&quot;/g, '"')
+                .replace(/&#39;/g, "'")
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/`(.*?)`/g, '<code>$1</code>');
+        } catch (fallbackError) {
+            console.error('降级处理也失败:', fallbackError);
+            return String(content || '');
+        }
+    }
 };
 
 const logout = async () => {

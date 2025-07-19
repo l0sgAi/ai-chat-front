@@ -6,7 +6,6 @@
     height: 100vh; /* 使用视口高度 */
     width: 100%;
     overflow: hidden;
-    background-color: #191720;
     color: #fff;
 }
 
@@ -15,7 +14,6 @@
     width: 100%;
     height: 100%; /* 占满父容器高度 */
     overflow: hidden;
-    background-color: #191720;
     justify-content: flex-start;  /* 强制左对齐 */
 }
 
@@ -37,6 +35,7 @@
     border-bottom: 1px solid #333;
     display: flex;
     justify-content: space-between;
+    background-color: #050505;
     align-items: center;
 }
 
@@ -53,6 +52,17 @@
     max-height: calc(100vh - 64px); /* 减去头部高度，确保在高度有限时可以滚动 */
     scrollbar-width: thin; /* Firefox */
     scrollbar-color: #333 #191720; /* Firefox */
+    background-color: #000000;
+}
+
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: #fff;
+    gap: 8px;
 }
 
 .empty-conversations {
@@ -83,11 +93,12 @@
     border-radius: 8px;
     margin-bottom: 8px;
     cursor: pointer;
+    background-color: #1d1d1d;
     transition: background-color 0.2s;
 }
 
 .conversation-item:hover {
-    background-color: #2d2d3a;
+    background-color: #015249;
 }
 
 .conversation-item.active {
@@ -96,16 +107,30 @@
 }
 
 .conversation-title {
-    font-weight: 500;
-    margin-bottom: 4px;
-    white-space: nowrap;
+    font-weight: bold;
+    color: #ffffff;
+    font-size: 14px;
+    cursor: pointer;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+}
+
+.title-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin: 0;
+    flex-shrink: 0;
 }
 
 .conversation-time {
     font-size: 12px;
     color: #999;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .conversation-preview {
@@ -122,13 +147,13 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    background-color: #1e1e2e;
+    background-color: #101015;
     height: 100%; /* 确保占满flex容器的高度 */
 }
 
 .chat-header {
     padding: 16px 24px;
-    background-color: #191720;
+    background-color: #0b0b0b;
     color: #fff;
     border-bottom: 1px solid #333;
     display: flex;
@@ -148,13 +173,13 @@
     padding: 20px;
     height: 800px;
     overflow-y: auto; /* 内容超出时滚动 */
-    background-color: #191720;
+    background-color: #030303;
 
     color: #fff;
 }
 
 .bottom-spacer-static{
-    background-color: #191720;
+    background-color: #030303;
     color: #fff;
     height: 300px;
 }
@@ -174,6 +199,220 @@
 
 .user-message {
     align-self: flex-end;
+}
+
+/* 流式消息样式 */
+
+/* 打字指示器动画 */
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 0;
+}
+
+.typing-indicator span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #666;
+    animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.typing-indicator span:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+@keyframes typing {
+    0%, 80%, 100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* 消息内容样式增强 */
+.message-content {
+    margin-top: 8px;
+    line-height: 1.6;
+    word-wrap: break-word;
+}
+
+/* GitHub Markdown样式适配 */
+.message-content.markdown-body {
+    background: transparent !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: inherit;
+    padding: 0;
+    margin-top: 8px;
+    box-sizing: border-box;
+    word-wrap: break-word;
+}
+
+/* 确保AI消息使用markdown样式 */
+.ai-message .message-content.markdown-body {
+    color: #e6edf3; /* 深色主题下的文字颜色 */
+}
+
+.user-message .message-content.markdown-body {
+    color: #ffffff; /* 用户消息保持白色 */
+}
+
+/* 代码块样式优化 - 深色主题适配 */
+.message-content.markdown-body pre {
+    background-color: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 16px;
+    overflow: auto;
+    font-size: 85%;
+    line-height: 1.45;
+    margin: 8px 0;
+    color: #e6edf3;
+}
+
+.message-content.markdown-body code {
+    background-color: rgba(110, 118, 129, 0.4);
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-size: 85%;
+    color: #f0f6fc;
+    font-family: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+.message-content.markdown-body pre code {
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+    font-size: 100%;
+    color: inherit;
+}
+
+/* highlight.js 代码高亮样式覆盖 - 深色主题 */
+.message-content.markdown-body .hljs {
+    background: #161b22 !important;
+    color: #e6edf3 !important;
+    padding: 16px;
+    border-radius: 6px;
+    overflow: auto;
+}
+
+/* 确保highlight.js的语法高亮颜色在深色主题下可见 */
+.message-content.markdown-body .hljs-keyword,
+.message-content.markdown-body .hljs-selector-tag,
+.message-content.markdown-body .hljs-literal,
+.message-content.markdown-body .hljs-section,
+.message-content.markdown-body .hljs-link {
+    color: #ff7b72 !important;
+}
+
+.message-content.markdown-body .hljs-string,
+.message-content.markdown-body .hljs-title,
+.message-content.markdown-body .hljs-name,
+.message-content.markdown-body .hljs-type,
+.message-content.markdown-body .hljs-attribute,
+.message-content.markdown-body .hljs-symbol,
+.message-content.markdown-body .hljs-bullet,
+.message-content.markdown-body .hljs-addition,
+.message-content.markdown-body .hljs-variable,
+.message-content.markdown-body .hljs-template-tag,
+.message-content.markdown-body .hljs-template-variable {
+    color: #a5d6ff !important;
+}
+
+.message-content.markdown-body .hljs-comment,
+.message-content.markdown-body .hljs-quote,
+.message-content.markdown-body .hljs-deletion,
+.message-content.markdown-body .hljs-meta {
+    color: #8b949e !important;
+}
+
+.message-content.markdown-body .hljs-number,
+.message-content.markdown-body .hljs-regexp,
+.message-content.markdown-body .hljs-literal {
+    color: #79c0ff !important;
+}
+
+.message-content.markdown-body .hljs-built_in,
+.message-content.markdown-body .hljs-builtin-name,
+.message-content.markdown-body .hljs-class .hljs-title {
+    color: #ffa657 !important;
+}
+
+/* 表格样式 */
+.message-content.markdown-body table {
+    border-collapse: collapse;
+    margin: 8px 0;
+}
+
+.message-content.markdown-body th,
+.message-content.markdown-body td {
+    border: 1px solid #d0d7de;
+    padding: 6px 13px;
+}
+
+.message-content.markdown-body th {
+    background-color: #f6f8fa;
+    font-weight: 600;
+}
+
+/* 引用块样式 */
+.message-content.markdown-body blockquote {
+    border-left: 4px solid #d0d7de;
+    padding: 0 16px;
+    margin: 8px 0;
+    color: #656d76;
+}
+
+/* 列表样式 */
+.message-content.markdown-body ul,
+.message-content.markdown-body ol {
+    padding-left: 2em;
+    margin: 8px 0;
+}
+
+/* 标题样式 */
+.message-content.markdown-body h1,
+.message-content.markdown-body h2,
+.message-content.markdown-body h3,
+.message-content.markdown-body h4,
+.message-content.markdown-body h5,
+.message-content.markdown-body h6 {
+    margin-top: 16px;
+    margin-bottom: 8px;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.message-content.markdown-body h1 {
+    font-size: 1.5em;
+    border-bottom: 1px solid #d0d7de;
+    padding-bottom: 8px;
+}
+
+.message-content.markdown-body h2 {
+    font-size: 1.25em;
+    border-bottom: 1px solid #d0d7de;
+    padding-bottom: 8px;
+}
+
+/* 链接样式 */
+.message-content.markdown-body a {
+    color: #0969da;
+    text-decoration: none;
+}
+
+.message-content.markdown-body a:hover {
+    text-decoration: underline;
 }
 
 .user-message .message-bubble {
@@ -218,7 +457,7 @@
 /* 底部输入区域 */
 .chat-input-container {
     padding: 16px 24px;
-    background-color: #191720;
+    background-color: #030303;
     border-top: 1px solid #333;
     position: fixed;
     bottom: 0;
@@ -228,7 +467,7 @@
 .chat-input-wrapper {
     display: flex;
     align-items: left;
-    background-color: #191720;
+    background-color: #030303;
     border: none;
     border-radius: 24px;
     padding: 4px 16px;
