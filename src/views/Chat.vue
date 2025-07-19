@@ -24,9 +24,11 @@
                             :class="['conversation-item', activeConversationId === conv.id ? 'active' : '']"
                             @click="switchConversation(conv.id)">
                             <n-space justify="space-between" align="left" style="width: 100%;">
-                                <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; width: 100%;">
+                                <div
+                                    style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; width: 100%;">
                                     <div class="conversation-title" :title="conv.originalTitle">
-                                        <n-space align="left" :wrap="false" size="small" style="width: 100%; min-width: 0;">
+                                        <n-space align="left" :wrap="false" size="small"
+                                            style="width: 100%; min-width: 0;">
                                             <n-icon style="flex-shrink: 0;"><chatbubble-outline /></n-icon>
                                             <n-icon v-if="conv.isFavorite" color="#f39c12" style="flex-shrink: 0;">
                                                 <star />
@@ -147,13 +149,15 @@ import {
     CreateOutline,
     Star
 } from '@vicons/ionicons5';
-import { marked } from 'marked';
+
+import { Marked } from 'marked';
 import hljs from 'highlight.js';
+import { markedHighlight } from "marked-highlight";
 
 // 引入独立的CSS文件
 import '../assets/css/chat.css';
 import 'github-markdown-css/github-markdown.css';
-import 'highlight.js/styles/github.css';
+import 'highlight.js/styles/monokai-sublime.css';
 
 const router = useRouter();
 const message = useMessage();
@@ -221,6 +225,7 @@ watch(messages, () => {
 
 // 组件挂载时加载会话列表
 onMounted(() => {
+    // 配置marked使用highlight.js进行代码高亮
     loadConversations();
 });
 
@@ -234,31 +239,31 @@ const switchConversation = async (convId) => {
 
     // 切换到新会话
     activeConversationId.value = convId;
-    
+
     // 从数据库加载会话的历史消息
     try {
         console.log('正在加载会话历史消息，会话ID:', convId);
         const response = await messageApi.getMessagesBySessionId(convId);
         console.log('历史消息API响应:', response);
-        
+
         if (response.code === 200) {
             console.log('历史消息数据:', response.data);
-            
+
             // 检查数据是否为空
             if (!response.data || response.data.length === 0) {
                 console.log('该会话暂无历史消息');
                 messages.value = [];
                 return;
             }
-            
+
             // 先按创建时间排序消息对
             const sortedData = response.data.sort((a, b) => new Date(a.createTime) - new Date(b.createTime));
-            
+
             // 将数据库中的消息转换为前端消息格式
             const historyMessages = sortedData.map(msgPair => {
                 console.log('处理消息对:', msgPair);
                 const messages = [];
-                
+
                 // 添加用户消息
                 if (msgPair.userContent) {
                     messages.push({
@@ -269,7 +274,7 @@ const switchConversation = async (convId) => {
                         createTime: msgPair.createTime // 保存原始时间用于排序
                     });
                 }
-                
+
                 // 添加AI回复消息
                 if (msgPair.aiContent) {
                     messages.push({
@@ -280,10 +285,10 @@ const switchConversation = async (convId) => {
                         createTime: msgPair.responseTime || msgPair.createTime // 保存原始时间用于排序
                     });
                 }
-                
+
                 return messages;
             }).flat();
-            
+
             console.log('转换后的历史消息:', historyMessages);
             messages.value = historyMessages;
         } else {
@@ -365,7 +370,7 @@ const conversationOptions = [
 const deleteConversation = async (convId) => {
     try {
         loading.value = true;
-        
+
         // 先删除会话相关的消息记录
         try {
             const deleteMessagesResponse = await messageApi.deleteMessagesBySessionId(convId);
@@ -377,7 +382,7 @@ const deleteConversation = async (convId) => {
         } catch (error) {
             console.warn('删除会话消息失败:', error);
         }
-        
+
         // 删除会话
         const response = await sessionApi.deleteSession(convId);
         if (response.code === 200) {
@@ -473,7 +478,7 @@ const sendMessage = async () => {
                     createTime: new Date(),
                     responseTime: null
                 };
-                
+
                 const saveResponse = await messageApi.addMessage(messageData);
                 if (saveResponse.code === 200) {
                     messagePairId = saveResponse.data; // 保存消息对ID
@@ -545,7 +550,7 @@ const sendMessage = async () => {
                     currentConv.time = new Date();
                     currentConv.messages = [...messages.value];
                 }
-                
+
                 console.log('AI回复完成，后端会自动更新数据库中的AI回复内容');
             });
 
@@ -571,13 +576,15 @@ const sendMessage = async () => {
     newMessage.value = '';
 };
 
+
+
 // 格式化消息内容
 const formatMessageContent = (content) => {
     if (!content) return '';
-    
+
     // 详细的类型检查和调试信息
     console.log('formatMessageContent 输入类型:', typeof content, '值:', content);
-    
+
     // 确保content是字符串类型
     let contentStr;
     try {
@@ -602,9 +609,25 @@ const formatMessageContent = (content) => {
             .replace(/&#39;/g, "'");
 
         // 使用marked解析Markdown
-        console.log('格式化消息内容:', processedContent);
+        // console.log('格式化消息内容:', processedContent);
+        const marked = new Marked(
+            markedHighlight({
+                emptyLangClass: 'hljs',
+                langPrefix: 'hljs language-',
+                highlight(code, lang, info) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            })
+        );
         const html = marked.parse(processedContent);
-        console.log('解析后消息内容:', html);
+        // console.log('解析后消息内容:', html);
+
+        // 检查是否包含代码块
+        if (html.includes('<pre><code')) {
+            console.log('检测到代码块，应用highlight.js样式');
+        }
+
         return html;
     } catch (error) {
         console.error('Markdown解析失败:', error, '输入内容:', contentStr);
