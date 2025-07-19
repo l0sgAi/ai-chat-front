@@ -95,6 +95,8 @@
     cursor: pointer;
     background-color: #1d1d1d;
     transition: background-color 0.2s;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .conversation-item:hover {
@@ -116,6 +118,7 @@
     white-space: nowrap;
     flex: 1;
     min-width: 0;
+    width: 100%;
 }
 
 .title-text {
@@ -193,7 +196,6 @@
 .message-bubble {
     padding: 12px 16px;
     border-radius: 8px;
-    
     position: relative;
 }
 

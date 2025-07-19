@@ -63,6 +63,20 @@ export const sessionApi = {
 };
 
 /**
+ * 消息对话相关API
+ */
+export const messageApi = {
+  // 新增消息对话
+  addMessage: (data) => post(`/message/pair/add`, data),
+  
+  // 根据会话ID查询消息列表
+  getMessagesBySessionId: (sessionId) => get(`/message/pair/select/${sessionId}`),
+  
+  // 删除会话消息
+  deleteMessagesBySessionId: (sessionId) => del(`/message/pair/delete`, { id: sessionId }),
+};
+
+/**
  * 系统相关API
  */
 export const systemApi = {
@@ -78,5 +92,6 @@ export default {
   userApi,
   chatApi,
   sessionApi,
+  messageApi,
   systemApi,
 };

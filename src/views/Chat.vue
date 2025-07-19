@@ -23,16 +23,16 @@
                         <div v-for="conv in conversations" :key="conv.id"
                             :class="['conversation-item', activeConversationId === conv.id ? 'active' : '']"
                             @click="switchConversation(conv.id)">
-                            <n-space justify="space-between" align="left">
-                                <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
+                            <n-space justify="space-between" align="left" style="width: 100%;">
+                                <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; width: 100%;">
                                     <div class="conversation-title" :title="conv.originalTitle">
-                                        <n-space align="left" :wrap="false" size="small" style="flex: 1; min-width: 0;">
+                                        <n-space align="left" :wrap="false" size="small" style="width: 100%; min-width: 0;">
                                             <n-icon style="flex-shrink: 0;"><chatbubble-outline /></n-icon>
                                             <n-icon v-if="conv.isFavorite" color="#f39c12" style="flex-shrink: 0;">
                                                 <star />
                                             </n-icon>
                                             <span
-                                                style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;">{{
+                                                style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0;">{{
                                                     conv.title }}</span>
                                         </n-space>
                                     </div>
@@ -116,7 +116,7 @@
 </template>
 
 <script setup>
-import { userApi, chatApi, sessionApi } from '../api';
+import { userApi, chatApi, sessionApi, messageApi } from '../api';
 import { ref, onMounted, nextTick, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMessage, darkTheme } from 'naive-ui';
@@ -225,7 +225,7 @@ onMounted(() => {
 });
 
 // 切换会话
-const switchConversation = (convId) => {
+const switchConversation = async (convId) => {
     // 保存当前会话的消息
     const currentConv = conversations.value.find(conv => conv.id === activeConversationId.value);
     if (currentConv) {
@@ -234,10 +234,64 @@ const switchConversation = (convId) => {
 
     // 切换到新会话
     activeConversationId.value = convId;
-    const newConv = conversations.value.find(conv => conv.id === convId);
-    if (newConv) {
-        messages.value = [...(newConv.messages || [])];
-    } else {
+    
+    // 从数据库加载会话的历史消息
+    try {
+        console.log('正在加载会话历史消息，会话ID:', convId);
+        const response = await messageApi.getMessagesBySessionId(convId);
+        console.log('历史消息API响应:', response);
+        
+        if (response.code === 200) {
+            console.log('历史消息数据:', response.data);
+            
+            // 检查数据是否为空
+            if (!response.data || response.data.length === 0) {
+                console.log('该会话暂无历史消息');
+                messages.value = [];
+                return;
+            }
+            
+            // 先按创建时间排序消息对
+            const sortedData = response.data.sort((a, b) => new Date(a.createTime) - new Date(b.createTime));
+            
+            // 将数据库中的消息转换为前端消息格式
+            const historyMessages = sortedData.map(msgPair => {
+                console.log('处理消息对:', msgPair);
+                const messages = [];
+                
+                // 添加用户消息
+                if (msgPair.userContent) {
+                    messages.push({
+                        id: `user_${msgPair.id}`,
+                        sender: username.value,
+                        content: msgPair.userContent,
+                        time: new Date(msgPair.createTime).toLocaleTimeString(),
+                        createTime: msgPair.createTime // 保存原始时间用于排序
+                    });
+                }
+                
+                // 添加AI回复消息
+                if (msgPair.aiContent) {
+                    messages.push({
+                        id: `ai_${msgPair.id}`,
+                        sender: 'AI助手',
+                        content: msgPair.aiContent,
+                        time: msgPair.responseTime ? new Date(msgPair.responseTime).toLocaleTimeString() : new Date(msgPair.createTime).toLocaleTimeString(),
+                        createTime: msgPair.responseTime || msgPair.createTime // 保存原始时间用于排序
+                    });
+                }
+                
+                return messages;
+            }).flat();
+            
+            console.log('转换后的历史消息:', historyMessages);
+            messages.value = historyMessages;
+        } else {
+            console.error('加载历史消息失败:', response.message);
+            messages.value = [];
+        }
+    } catch (error) {
+        console.error('加载历史消息失败:', error);
         messages.value = [];
     }
 };
@@ -311,6 +365,20 @@ const conversationOptions = [
 const deleteConversation = async (convId) => {
     try {
         loading.value = true;
+        
+        // 先删除会话相关的消息记录
+        try {
+            const deleteMessagesResponse = await messageApi.deleteMessagesBySessionId(convId);
+            if (deleteMessagesResponse.code === 200) {
+                console.log('会话消息已删除');
+            } else {
+                console.warn('删除会话消息失败:', deleteMessagesResponse.message);
+            }
+        } catch (error) {
+            console.warn('删除会话消息失败:', error);
+        }
+        
+        // 删除会话
         const response = await sessionApi.deleteSession(convId);
         if (response.code === 200) {
             conversations.value = conversations.value.filter(conv => conv.id !== convId);
@@ -322,7 +390,7 @@ const deleteConversation = async (convId) => {
                     messages.value = [];
                 }
             }
-            message.success('会话已删除');
+            message.success('会话及相关消息已删除');
         } else {
             message.error(`删除会话失败: ${response.message}`);
         }
@@ -391,6 +459,32 @@ const sendMessage = async () => {
             const streamSessionId = response.data; // 后端返回的sessionId
             console.log('获取到streamSessionId:', streamSessionId); // 调试日志
 
+            // 保存用户消息到数据库
+            let messagePairId = null;
+            try {
+                const messageData = {
+                    sessionId: activeConversationId.value,
+                    sseSessionId: streamSessionId, // 使用获取到的SSE会话ID
+                    userContent: messageContent,
+                    aiContent: '', // AI回复内容暂时为空
+                    modelUsed: 1, // 默认模型ID
+                    status: 0, // 0-生成中
+                    tokens: 0, // 暂时为0
+                    createTime: new Date(),
+                    responseTime: null
+                };
+                
+                const saveResponse = await messageApi.addMessage(messageData);
+                if (saveResponse.code === 200) {
+                    messagePairId = saveResponse.data; // 保存消息对ID
+                    console.log('用户消息已保存到数据库，消息对ID:', messagePairId);
+                } else {
+                    console.error('保存用户消息失败:', saveResponse.message);
+                }
+            } catch (error) {
+                console.error('保存用户消息失败:', error);
+            }
+
             // 创建AI消息占位符
             const aiMsg = {
                 id: Date.now() + 1,
@@ -451,6 +545,8 @@ const sendMessage = async () => {
                     currentConv.time = new Date();
                     currentConv.messages = [...messages.value];
                 }
+                
+                console.log('AI回复完成，后端会自动更新数据库中的AI回复内容');
             });
 
             // 设置超时处理
