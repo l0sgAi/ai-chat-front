@@ -6,6 +6,7 @@
     height: 100vh; /* 使用视口高度 */
     width: 100%;
     overflow: hidden;
+    background-color: #000000;
     color: #fff;
 }
 
@@ -121,72 +122,6 @@
 .message-bubble .markdown-body pre {
     max-width: 100% !important;
     word-wrap: break-word !important;
-}
-
-/* highlight.js 深色主题样式覆盖 */
-.hljs {
-    background: #1e1e1e !important;
-    color: #f8f8f2 !important;
-}
-
-.hljs-keyword,
-.hljs-selector-tag,
-.hljs-literal,
-.hljs-section,
-.hljs-link {
-    color: #f92672 !important;
-}
-
-.hljs-function .hljs-keyword {
-    color: #66d9ef !important;
-}
-
-.hljs-subst {
-    color: #f8f8f2 !important;
-}
-
-.hljs-string,
-.hljs-title,
-.hljs-name,
-.hljs-type,
-.hljs-attribute,
-.hljs-symbol,
-.hljs-bullet,
-.hljs-addition,
-.hljs-variable,
-.hljs-template-tag,
-.hljs-template-variable {
-    color: #e6db74 !important;
-}
-
-.hljs-comment,
-.hljs-quote,
-.hljs-deletion,
-.hljs-meta {
-    color: #75715e !important;
-}
-
-.hljs-number,
-.hljs-regexp,
-.hljs-literal {
-    color: #ae81ff !important;
-}
-
-.hljs-built_in,
-.hljs-builtin-name {
-    color: #a6e22e !important;
-}
-
-.hljs-class .hljs-title {
-    color: #a6e22e !important;
-}
-
-.hljs-emphasis {
-    font-style: italic !important;
-}
-
-.hljs-strong {
-    font-weight: bold !important;
 }
 
 .conversation-item {
@@ -455,17 +390,20 @@
 .message-content.markdown-body table {
     border-collapse: collapse;
     margin: 8px 0;
+    border: 1px solid #30363d;
 }
 
 .message-content.markdown-body th,
 .message-content.markdown-body td {
-    border: 1px solid #d0d7de;
+    border: 1px solid #30363d;
     padding: 6px 13px;
+    color: #e6edf3;
 }
 
 .message-content.markdown-body th {
-    background-color: #f6f8fa;
+    background-color: #161b22;
     font-weight: 600;
+    color: #e6edf3;
 }
 
 /* 引用块样式 */

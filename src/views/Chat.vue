@@ -19,6 +19,7 @@
                             <span>加载中...</span>
                         </div>
                     </template>
+                    
                     <template v-else-if="conversations.length > 0">
                         <div v-for="conv in conversations" :key="conv.id"
                             :class="['conversation-item', activeConversationId === conv.id ? 'active' : '']"
@@ -76,7 +77,7 @@
                 </n-layout-header>
 
                 <!-- 聊天消息区域 -->
-                <n-layout-content class="chat-messages">
+                <n-layout-content ref="chatContentRef" class="chat-messages">
                     <template v-if="messages.length > 0">
                         <div v-for="msg in messages" :key="msg.id"
                             :class="['message', msg.sender === username ? 'user-message' : 'ai-message']">
@@ -170,10 +171,11 @@ const activeConversationId = ref(null);
 const conversations = ref([]);
 const loading = ref(false);
 
-// 截断标题到最长12个字符
+const chatContentRef = ref(null);
+// 截断标题到最长11个字符
 const truncateTitle = (title) => {
     if (!title) return '新会话';
-    return title.length > 12 ? title.substring(0, 12) + '...' : title;
+    return title.length > 10 ? title.substring(0, 10) + '...' : title;
 };
 
 // 截断摘要到最长20个字符
@@ -211,11 +213,25 @@ const loadConversations = async () => {
 
 // 自动滚动到底部
 const scrollToBottom = async () => {
-    await nextTick();
-    const chatMessages = document.querySelector('.chat-messages');
-    if (chatMessages) {
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+  await nextTick(); // 等待DOM更新完成
+  const layoutInst = chatContentRef.value;
+  if (layoutInst) {
+    const scrollContainer = layoutInst.$el; // .n-layout-scroll-container
+    if (scrollContainer) {
+      // 查找实际的滚动子容器
+      const actualScrollContainer = scrollContainer.querySelector('.n-scrollbar-container') || 
+                                   scrollContainer.querySelector('.n-layout-scroll-container') ||
+                                   scrollContainer.querySelector('[class*="scroll"]') ||
+                                   scrollContainer.firstElementChild;
+      console.log('Actual scroll container:', actualScrollContainer);
+      if (actualScrollContainer) {
+        actualScrollContainer.scrollTo({
+          top: actualScrollContainer.scrollHeight,
+          behavior: 'smooth'
+        });
+      }
     }
+  }
 };
 
 // 监听消息变化，自动滚动到底部
@@ -242,12 +258,12 @@ const switchConversation = async (convId) => {
 
     // 从数据库加载会话的历史消息
     try {
-        console.log('正在加载会话历史消息，会话ID:', convId);
+        // console.log('正在加载会话历史消息，会话ID:', convId);
         const response = await messageApi.getMessagesBySessionId(convId);
-        console.log('历史消息API响应:', response);
+        // console.log('历史消息API响应:', response);
 
         if (response.code === 200) {
-            console.log('历史消息数据:', response.data);
+            // console.log('历史消息数据:', response.data);
 
             // 检查数据是否为空
             if (!response.data || response.data.length === 0) {
@@ -261,7 +277,7 @@ const switchConversation = async (convId) => {
 
             // 将数据库中的消息转换为前端消息格式
             const historyMessages = sortedData.map(msgPair => {
-                console.log('处理消息对:', msgPair);
+                // console.log('处理消息对:', msgPair);
                 const messages = [];
 
                 // 添加用户消息
@@ -289,7 +305,7 @@ const switchConversation = async (convId) => {
                 return messages;
             }).flat();
 
-            console.log('转换后的历史消息:', historyMessages);
+            // console.log('转换后的历史消息:', historyMessages);
             messages.value = historyMessages;
         } else {
             console.error('加载历史消息失败:', response.message);
@@ -506,15 +522,17 @@ const sendMessage = async () => {
 
             eventSource.onmessage = (event) => {
                 try {
-                    console.log('接收到SSE数据:', event.data); // 调试日志
+                    // console.log('接收到SSE数据:', event.data); // 调试日志
                     // 后端直接发送文本内容，不是JSON格式
                     const text = event.data;
                     if (text && text.trim()) {
-                        console.log('处理文本内容:', text); // 调试日志
+                        // console.log('处理文本内容:', text); // 调试日志
                         // 确保aiMsg.content是字符串类型，然后累加内容
                         aiMsg.content = (aiMsg.content || '') + text;
                         // 触发响应式更新
                         messages.value = [...messages.value];
+                        // 每次接收到新内容时滚动到底部
+                        scrollToBottom();
                     }
                 } catch (error) {
                     console.error('处理SSE数据失败:', error, event);
@@ -583,7 +601,7 @@ const formatMessageContent = (content) => {
     if (!content) return '';
 
     // 详细的类型检查和调试信息
-    console.log('formatMessageContent 输入类型:', typeof content, '值:', content);
+    // console.log('formatMessageContent 输入类型:', typeof content, '值:', content);
 
     // 确保content是字符串类型
     let contentStr;
