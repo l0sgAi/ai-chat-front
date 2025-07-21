@@ -2,7 +2,7 @@
     <n-config-provider :theme="darkTheme">
         <div class="chat-container">
             <!-- 左侧会话列表 -->
-            <n-layout-sider bordered content-style="padding: 0;" class="chat-sidebar">
+            <n-layout-sider bordered content-style="padding: 0;" class="chat-sidebar" style="height: 100dvh;">
                 <div class="sidebar-header">
                     <span class="sidebar-title">会话列表</span>
                     <n-button quaternary circle @click="prepareNewConversation">

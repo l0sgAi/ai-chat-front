@@ -46,6 +46,10 @@
     color: #ffffff;
 }
 
+.n-layout-sider-scroll-container{
+    background-color: #000000;
+}
+
 .conversation-list {
     flex: auto;
     overflow-y: auto;
