@@ -48,6 +48,7 @@
 
 .n-layout-sider-scroll-container{
     background-color: #000000;
+    overflow: hidden !important;
 }
 
 .conversation-list {

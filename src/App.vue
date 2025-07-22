@@ -1,12 +1,14 @@
 <script setup>
-// 导入NaiveUI的消息提供者组件
-import { NMessageProvider } from 'naive-ui';
+// 导入NaiveUI的消息和对话框提供者组件
+import { NMessageProvider, NDialogProvider } from 'naive-ui';
 </script>
 
 <template>
-  <!-- 使用NMessageProvider包裹router-view，提供全局消息支持 -->
+  <!-- 使用NMessageProvider和NDialogProvider包裹router-view，提供全局消息和对话框支持 -->
   <n-message-provider>
-    <router-view />
+    <n-dialog-provider>
+      <router-view />
+    </n-dialog-provider>
   </n-message-provider>
 </template>
 

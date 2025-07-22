@@ -44,14 +44,26 @@
                                     </div>
                                 </div>
 
-                                <n-dropdown :options="conversationOptions"
-                                    @select="(key) => handleConversationAction(key, conv.id)">
-                                    <n-button quaternary circle size="small">
-                                        <template #icon>
-                                            <n-icon><ellipsis-horizontal-outline /></n-icon>
+                                <n-space :size="0" :wrap="false">
+                                    <n-popconfirm @positive-click="deleteConversation(conv.id)" positive-text="确认" negative-text="取消">
+                                        <template #trigger>
+                                            <n-button quaternary circle size="small">
+                                                <template #icon>
+                                                    <n-icon><trash-outline /></n-icon>
+                                                </template>
+                                            </n-button>
                                         </template>
-                                    </n-button>
-                                </n-dropdown>
+                                        确定要删除会话 "{{ conv.originalTitle }}" 吗？此操作不可撤销。
+                                    </n-popconfirm>
+                                    <!-- <n-dropdown :options="conversationOptions"
+                                        @select="(key) => handleConversationAction(key, conv.id)">
+                                        <n-button quaternary circle size="small">
+                                            <template #icon>
+                                                <n-icon><ellipsis-horizontal-outline /></n-icon>
+                                            </template>
+                                        </n-button>
+                                    </n-dropdown> -->
+                                </n-space>
                             </n-space>
                         </div>
                     </template>
@@ -122,7 +134,7 @@
 import { userApi, chatApi, sessionApi, messageApi } from '../api';
 import { ref, onMounted, nextTick, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { useMessage, darkTheme } from 'naive-ui';
+import { useMessage, useDialog, darkTheme } from 'naive-ui';
 import { h } from 'vue';
 import {
     NConfigProvider,
@@ -138,7 +150,8 @@ import {
     NIcon,
     NDropdown,
     NEmpty,
-    NSpin
+    NSpin,
+    NPopconfirm
 } from 'naive-ui';
 import {
     ChatbubbleOutline,
@@ -162,6 +175,7 @@ import 'highlight.js/styles/monokai-sublime.css';
 
 const router = useRouter();
 const message = useMessage();
+const dialog = useDialog();
 const messages = ref([]);
 const newMessage = ref('');
 const username = ref('用户');
@@ -374,11 +388,6 @@ const conversationOptions = [
         label: '重命名',
         key: 'rename',
         icon: () => h(NIcon, null, { default: () => h(CreateOutline) })
-    },
-    {
-        label: '删除',
-        key: 'delete',
-        icon: () => h(NIcon, null, { default: () => h(TrashOutline) })
     }
 ];
 
@@ -386,18 +395,6 @@ const conversationOptions = [
 const deleteConversation = async (convId) => {
     try {
         loading.value = true;
-
-        // 先删除会话相关的消息记录
-        try {
-            const deleteMessagesResponse = await messageApi.deleteMessagesBySessionId(convId);
-            if (deleteMessagesResponse.code === 200) {
-                console.log('会话消息已删除');
-            } else {
-                console.warn('删除会话消息失败:', deleteMessagesResponse.message);
-            }
-        } catch (error) {
-            console.warn('删除会话消息失败:', error);
-        }
 
         // 删除会话
         const response = await sessionApi.deleteSession(convId);
@@ -424,9 +421,7 @@ const deleteConversation = async (convId) => {
 
 // 处理会话菜单选择
 const handleConversationAction = (key, convId) => {
-    if (key === 'delete') {
-        deleteConversation(convId);
-    } else if (key === 'rename') {
+    if (key === 'rename') {
         // 这里可以实现重命名功能
         message.info('重命名功能待实现');
     }
