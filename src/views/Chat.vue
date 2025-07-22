@@ -19,7 +19,7 @@
                             <span>加载中...</span>
                         </div>
                     </template>
-                    
+
                     <template v-else-if="conversations.length > 0">
                         <div v-for="conv in conversations" :key="conv.id"
                             :class="['conversation-item', activeConversationId === conv.id ? 'active' : '']"
@@ -213,25 +213,25 @@ const loadConversations = async () => {
 
 // 自动滚动到底部
 const scrollToBottom = async () => {
-  await nextTick(); // 等待DOM更新完成
-  const layoutInst = chatContentRef.value;
-  if (layoutInst) {
-    const scrollContainer = layoutInst.$el; // .n-layout-scroll-container
-    if (scrollContainer) {
-      // 查找实际的滚动子容器
-      const actualScrollContainer = scrollContainer.querySelector('.n-scrollbar-container') || 
-                                   scrollContainer.querySelector('.n-layout-scroll-container') ||
-                                   scrollContainer.querySelector('[class*="scroll"]') ||
-                                   scrollContainer.firstElementChild;
-      console.log('Actual scroll container:', actualScrollContainer);
-      if (actualScrollContainer) {
-        actualScrollContainer.scrollTo({
-          top: actualScrollContainer.scrollHeight,
-          behavior: 'smooth'
-        });
-      }
+    await nextTick(); // 等待DOM更新完成
+    const layoutInst = chatContentRef.value;
+    if (layoutInst) {
+        const scrollContainer = layoutInst.$el; // .n-layout-scroll-container
+        if (scrollContainer) {
+            // 查找实际的滚动子容器
+            const actualScrollContainer = scrollContainer.querySelector('.n-scrollbar-container') ||
+                scrollContainer.querySelector('.n-layout-scroll-container') ||
+                scrollContainer.querySelector('[class*="scroll"]') ||
+                scrollContainer.firstElementChild;
+            console.log('Actual scroll container:', actualScrollContainer);
+            if (actualScrollContainer) {
+                actualScrollContainer.scrollTo({
+                    top: actualScrollContainer.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }
+        }
     }
-  }
 };
 
 // 监听消息变化，自动滚动到底部
@@ -471,7 +471,8 @@ const sendMessage = async () => {
         const response = await chatApi.sendMessage({
             question: messageContent,
             sessionId: activeConversationId.value,
-            modelId: 1 // 添加默认模型ID
+            modelId: 1, // TODO:添加默认模型ID，后续修改为可选择
+            conversationId: activeConversationId.value
         });
 
         console.log('发送消息API响应:', response); // 添加调试日志
