@@ -1,0 +1,149 @@
+/* AI配置管理页面样式 */
+.config-container {
+    height: 100vh;
+}
+
+.config-header {
+    padding: 16px 24px;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-content h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.config-content {
+    padding: 24px;
+}
+
+.search-bar {
+    margin-bottom: 16px;
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.config-table {
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.api-key-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.api-key-text {
+    font-family: monospace;
+    font-size: 12px;
+    color: #666;
+}
+
+.copy-button {
+    padding: 2px 6px;
+    font-size: 12px;
+}
+
+.model-type-tag {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.model-type-0 {
+    background-color: #e6f7ff;
+    color: #1890ff;
+    border: 1px solid #91d5ff;
+}
+
+.model-type-1 {
+    background-color: #f6ffed;
+    color: #52c41a;
+    border: 1px solid #b7eb8f;
+}
+
+.model-type-2 {
+    background-color: #fff2e8;
+    color: #fa8c16;
+    border: 1px solid #ffd591;
+}
+
+/* 深色模式下的标签样式 */
+.dark-theme .model-type-0 {
+    background-color: #111b26;
+    color: #69c0ff;
+    border: 1px solid #003a8c;
+}
+
+.dark-theme .model-type-1 {
+    background-color: #162312;
+    color: #95de64;
+    border: 1px solid #389e0d;
+}
+
+.dark-theme .model-type-2 {
+    background-color: #2b1d11;
+    color: #ffa940;
+    border: 1px solid #d48806;
+}
+
+.dark-theme .api-key-text {
+    color: #999;
+}
+
+/* 表单样式 */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.form-grid .full-width {
+    grid-column: 1 / -1;
+}
+
+.parameter-group {
+    border: none;
+    color: white;
+    border-radius: 6px;
+    padding: 16px;
+    margin-top: 16px;
+}
+
+.parameter-group-title {
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: white;
+}
+
+.dark-theme .parameter-group {
+    border-color: #434343;
+}
+
+.dark-theme .parameter-group-title {
+    color: #fff;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .config-content {
+        padding: 16px;
+    }
+    
+    .search-bar {
+        padding: 12px;
+    }
+}

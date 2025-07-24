@@ -11,7 +11,7 @@ export const userApi = {
   register: (data) => post(`/sys/user/auth/doRegister`, data),
   
   // 获取用户信息
-  getUserInfo: () => get(`/sys/user/info`),
+  getUserInfo: () => get(`/sys/user/getUserInfo`),
   
   // 更新用户信息
   updateUserInfo: (data) => put(`/sys/user/info`, data),
@@ -90,6 +90,23 @@ export const systemApi = {
   getCaptcha: () => get(`/system/captcha`),
 };
 
+/**
+ * AI配置相关API
+ */
+export const configApi = {
+  // 新增配置
+  addConfig: (data) => post(`/ai/config/add`, data),
+  
+  // 查询配置
+  queryConfigs: (params) => get(`/ai/config/query`, params),
+  
+  // 更新配置
+  updateConfig: (data) => put(`/ai/config/update`, data),
+  
+  // 删除配置
+  deleteConfig: (id) => del(`/ai/config/delete?id=${id}`),
+};
+
 // 导出所有API
 export default {
   userApi,
@@ -97,4 +114,5 @@ export default {
   sessionApi,
   messageApi,
   systemApi,
+  configApi,
 };

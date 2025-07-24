@@ -80,12 +80,20 @@
                             'AI聊天' :
                             'AI聊天'}}
                     </div>
-                    <n-button @click="logout" type="error" secondary>
-                        <template #icon>
-                            <n-icon><log-out-outline /></n-icon>
-                        </template>
-                        退出登录
-                    </n-button>
+                    <n-space>
+                        <n-button @click="goToConfig" type="primary" secondary v-if="isAdmin">
+                            <template #icon>
+                                <n-icon><settings-outline /></n-icon>
+                            </template>
+                            设置
+                        </n-button>
+                        <n-button @click="logout" type="error" secondary>
+                            <template #icon>
+                                <n-icon><log-out-outline /></n-icon>
+                            </template>
+                            退出登录
+                        </n-button>
+                    </n-space>
                 </n-layout-header>
 
                 <!-- 聊天消息区域 -->
@@ -135,7 +143,7 @@
 </template>
 
 <script setup>
-import { userApi, chatApi, sessionApi, messageApi } from '../api';
+import { userApi, chatApi, sessionApi, messageApi, configApi } from '../api';
 import { ref, onMounted, nextTick, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMessage, useDialog, darkTheme } from 'naive-ui';
@@ -166,7 +174,8 @@ import {
     TrashOutline,
     CreateOutline,
     Star,
-    StopOutline
+    StopOutline,
+    SettingsOutline
 } from '@vicons/ionicons5';
 
 import { Marked } from 'marked';
@@ -185,6 +194,7 @@ const messages = ref([]);
 const newMessage = ref('');
 const username = ref('用户');
 const activeConversationId = ref(null);
+const isAdmin = ref(false);
 
 // 会话列表数据
 const conversations = ref([]);
@@ -264,9 +274,20 @@ watch(messages, () => {
 }, { deep: true });
 
 // 组件挂载时加载会话列表
-onMounted(() => {
+onMounted(async () => {
     // 配置marked使用highlight.js进行代码高亮
     loadConversations();
+    
+    // 获取用户信息，检查是否为管理员
+    try {
+        const response = await userApi.getUserInfo();
+        if (response.code === 200) {
+            username.value = response.data.username || '用户';
+            isAdmin.value = response.data.role === 1; // role=1为管理员
+        }
+    } catch (error) {
+        console.error('获取用户信息失败:', error);
+    }
 });
 
 // 切换会话
@@ -734,6 +755,11 @@ const formatMessageContent = (content) => {
             return String(content || '');
         }
     }
+};
+
+// 跳转到配置页面
+const goToConfig = () => {
+    router.push('/config');
 };
 
 const logout = async () => {
