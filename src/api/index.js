@@ -30,6 +30,9 @@ export const chatApi = {
   // 发送消息
   sendMessage: (data) => post(`/chat/send`, data),
   
+  // 停止生成
+  stopGeneration: (sessionId) => put(`/chat/stop/${sessionId}`),
+  
   // 创建SSE连接获取流式响应
   createSSEConnection: (sessionId) => {
     const baseURL = import.meta.env.VITE_API_BASE_URL || '/api';

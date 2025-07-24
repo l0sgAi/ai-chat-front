@@ -42,7 +42,7 @@
 
                 <n-form-item class="dark-color-remember">
                     <n-checkbox v-model:checked="formData.rememberMe"></n-checkbox>
-                    记住我
+                    <p style="color: black;">记住我</p>
                 </n-form-item>
 
                 <n-button type="primary" block @click="login" style="margin-top: 12px">

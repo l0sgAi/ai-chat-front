@@ -193,6 +193,7 @@ const loading = ref(false);
 // AI生成状态控制
 const isGenerating = ref(false);
 const currentEventSource = ref(null);
+const currentStreamSessionId = ref(null);
 
 const chatContentRef = ref(null);
 // 截断标题到最长11个字符
@@ -475,7 +476,7 @@ const sendMessage = async () => {
         const response = await chatApi.sendMessage({
             question: messageContent,
             sessionId: activeConversationId.value,
-            modelId: 5, // TODO:添加默认模型ID，后续修改为可选择
+            modelId: 1, // TODO:添加默认模型ID，后续修改为可选择
             conversationId: activeConversationId.value
         });
 
@@ -523,6 +524,7 @@ const sendMessage = async () => {
 
             // 设置生成状态
             isGenerating.value = true;
+            currentStreamSessionId.value = streamSessionId;
             
             // 建立SSE连接获取流式响应
             console.log('准备建立SSE连接...'); // 调试日志
@@ -553,6 +555,7 @@ const sendMessage = async () => {
                 aiMsg.isStreaming = false;
                 isGenerating.value = false;
                 currentEventSource.value = null;
+                currentStreamSessionId.value = null;
                 eventSource.close();
 
                 // 如果没有接收到任何内容，显示错误信息
@@ -573,6 +576,7 @@ const sendMessage = async () => {
                 aiMsg.isStreaming = false;
                 isGenerating.value = false;
                 currentEventSource.value = null;
+                currentStreamSessionId.value = null;
                 eventSource.close();
 
                 // 更新会话列表中的最后消息
@@ -592,6 +596,7 @@ const sendMessage = async () => {
                     aiMsg.isStreaming = false;
                     isGenerating.value = false;
                     currentEventSource.value = null;
+                    currentStreamSessionId.value = null;
                     aiMsg.content = '连接超时，请检查网络或重试。';
                     eventSource.close();
                     message.warning('连接超时，请重试');
@@ -601,10 +606,12 @@ const sendMessage = async () => {
         } else {
             message.error(`发送失败: ${response.message}`);
             isGenerating.value = false;
+            currentStreamSessionId.value = null;
         }
     } catch (error) {
         message.error(`发送失败: ${error.message}`);
         isGenerating.value = false;
+        currentStreamSessionId.value = null;
     }
 
     // 清空输入框
@@ -612,7 +619,27 @@ const sendMessage = async () => {
 };
 
 // 停止AI生成
-const stopGeneration = () => {
+const stopGeneration = async () => {
+    if (!currentStreamSessionId.value) {
+        console.warn('没有找到当前的SSE会话ID');
+        return;
+    }
+    
+    try {
+        // 调用后端停止接口
+        const response = await chatApi.stopGeneration(currentStreamSessionId.value);
+        if (response.code === 200) {
+            console.log('停止生成成功:', response.message);
+        } else {
+            console.error('停止生成失败:', response.message);
+            message.error(`停止生成失败: ${response.message}`);
+        }
+    } catch (error) {
+        console.error('调用停止接口失败:', error);
+        message.error(`停止生成失败: ${error.message}`);
+    }
+    
+    // 关闭前端SSE连接
     if (currentEventSource.value) {
         currentEventSource.value.close();
         currentEventSource.value = null;
@@ -627,7 +654,9 @@ const stopGeneration = () => {
         }
     }
     
+    // 重置状态
     isGenerating.value = false;
+    currentStreamSessionId.value = null;
     message.info('已停止生成');
 };
 
