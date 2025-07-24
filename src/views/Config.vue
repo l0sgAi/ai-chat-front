@@ -258,11 +258,11 @@ const formData = ref({
     similarityTopP: 0.9,
     temperature: 0.7,
     similarityTopK: 40,
-    isDefault: 1,
+    isDefault: 0,
     caseTags: '',
     caseBrief: '',
     caseRemark: '',
-    isEnabled: 1
+    isEnabled: 0
 });
 
 // 表单验证规则
@@ -333,8 +333,8 @@ const defaultOptions = [
 
 // 启用状态选项
 const enabledOptions = [
-    { label: '启用', value: 1 },
-    { label: '禁用', value: 0 }
+    { label: '启用', value: 0 },
+    { label: '禁用', value: 1 }
 ];
 
 // API密钥脱敏显示
@@ -575,11 +575,11 @@ const resetForm = () => {
         similarityTopP: 0.9,
         temperature: 0.7,
         similarityTopK: 40,
-        isDefault: 1,
+        isDefault: 0,
         caseTags: '',
         caseBrief: '',
         caseRemark: '',
-        isEnabled: 1
+        isEnabled: 0
     };
     editingConfig.value = null;
 };
@@ -605,11 +605,11 @@ const editConfig = (config) => {
         similarityTopP: config.similarityTopP || 0.9,
         temperature: config.temperature || 0.7,
         similarityTopK: config.similarityTopK || 40,
-        isDefault: config.isDefault || 1,
+        isDefault: config.isDefault || 0,
         caseTags: config.caseTags || '',
         caseBrief: config.caseBrief || '',
         caseRemark: config.caseRemark || '',
-        isEnabled: config.isEnabled || 1
+        isEnabled: config.isEnabled || 0
     };
     showAddModal.value = true;
 };

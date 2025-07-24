@@ -25,4 +25,9 @@ body {
   line-height: 1.6;
   color: #333;
 }
+
+#app {
+  width: 100%;
+  height: 100vh;
+}
 </style>

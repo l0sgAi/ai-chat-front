@@ -80,7 +80,15 @@
                             'AI聊天' :
                             'AI聊天'}}
                     </div>
-                    <n-space>
+                    <n-space align="center">
+                        <span>当前模型：</span>
+                        <n-select
+                            v-model:value="selectedModelId"
+                            :options="modelOptions"
+                            placeholder="选择模型"
+                            style="width: 200px;"
+                            :loading="modelsLoading"
+                        />
                         <n-button @click="goToConfig" type="primary" secondary v-if="isAdmin">
                             <template #icon>
                                 <n-icon><settings-outline /></n-icon>
@@ -126,7 +134,8 @@
                     <div class="chat-input-wrapper">
                         <n-input v-model:value="newMessage" type="textarea" round placeholder="输入消息..."
                             @keyup.enter="!isGenerating ? sendMessage() : null" class="chat-input" :autosize="{ minRows: 1, maxRows: 3 }" />
-                        <n-button type="primary" secondary circle class="send-button" 
+                        <n-space align="center">
+                            <n-button type="primary" secondary circle class="send-button" 
                                   @click="isGenerating ? stopGeneration() : sendMessage()">
                             <template #icon>
                                 <n-icon>
@@ -135,6 +144,7 @@
                                 </n-icon>
                             </template>
                         </n-button>
+                        </n-space>
                     </div>
                 </n-layout-footer>
             </n-layout>
@@ -163,7 +173,8 @@ import {
     NDropdown,
     NEmpty,
     NSpin,
-    NPopconfirm
+    NPopconfirm,
+    NSelect
 } from 'naive-ui';
 import {
     ChatbubbleOutline,
@@ -199,6 +210,11 @@ const isAdmin = ref(false);
 // 会话列表数据
 const conversations = ref([]);
 const loading = ref(false);
+
+// 模型选择相关
+const selectedModelId = ref(null);
+const modelOptions = ref([]);
+const modelsLoading = ref(false);
 
 // AI生成状态控制
 const isGenerating = ref(false);
@@ -245,6 +261,35 @@ const loadConversations = async () => {
     }
 };
 
+// 加载模型列表
+const loadModels = async () => {
+    try {
+        modelsLoading.value = true;
+        const response = await configApi.getModels();
+        if (response.code === 200) {
+            modelOptions.value = response.data.map(model => ({
+                label: model.displayName,
+                value: model.id
+            }));
+            
+            // 设置默认选中的模型（isDefault为1的模型）
+            const defaultModel = response.data.find(model => model.isDefault === 1);
+            if (defaultModel) {
+                selectedModelId.value = defaultModel.id;
+            } else if (response.data.length > 0) {
+                // 如果没有默认模型，选择第一个
+                selectedModelId.value = response.data[0].id;
+            }
+        } else {
+            message.error(`加载模型列表失败: ${response.message}`);
+        }
+    } catch (error) {
+        message.error(`加载模型列表失败: ${error.message}`);
+    } finally {
+        modelsLoading.value = false;
+    }
+};
+
 // 自动滚动到底部
 const scrollToBottom = async () => {
     await nextTick(); // 等待DOM更新完成
@@ -277,6 +322,7 @@ watch(messages, () => {
 onMounted(async () => {
     // 配置marked使用highlight.js进行代码高亮
     loadConversations();
+    loadModels(); // 加载模型列表
     
     // 获取用户信息，检查是否为管理员
     try {
@@ -377,7 +423,7 @@ const createNewConversation = async (firstQuestion = null) => {
         const sessionData = {
             title: firstQuestion ? truncateTitle(firstQuestion) : `新会话 ${conversations.value.length + 1}`,
             isFavorite: 0,
-            modelId: 1, // 默认模型ID
+            modelId: selectedModelId.value || 1, // 使用选中的模型ID，如果没有则使用默认值1
             tags: '',
             summary: ''
         };
@@ -460,6 +506,12 @@ const handleConversationAction = (key, convId) => {
 
 const sendMessage = async () => {
     if (!newMessage.value.trim()) return;
+    
+    // 检查是否已选择模型
+    if (!selectedModelId.value) {
+        message.error('请先选择一个模型');
+        return;
+    }
 
     try {
         // 如果没有选择会话，先创建新会话
@@ -497,7 +549,7 @@ const sendMessage = async () => {
         const response = await chatApi.sendMessage({
             question: messageContent,
             sessionId: activeConversationId.value,
-            modelId: 1, // TODO:添加默认模型ID，后续修改为可选择
+            modelId: selectedModelId.value, // 使用选中的模型ID
             conversationId: activeConversationId.value
         });
 
@@ -515,7 +567,7 @@ const sendMessage = async () => {
                     sseSessionId: streamSessionId, // 使用获取到的SSE会话ID
                     userContent: messageContent,
                     aiContent: '', // AI回复内容暂时为空
-                    modelUsed: 1, // 默认模型ID
+                    modelUsed: selectedModelId.value, // 默认模型ID
                     status: 0, // 0-生成中
                     tokens: 0, // 暂时为0
                     createTime: new Date(),

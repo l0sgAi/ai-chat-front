@@ -549,6 +549,14 @@
     }
 }
 
+/* 模型选择器样式 */
+.model-selector {
+    padding: 0;
+    margin: 5px;
+    background-color: transparent;
+    border-radius: 8px;
+}
+
 @media (max-width: 576px) {
     .chat-container {
         flex-direction: column;
@@ -558,5 +566,13 @@
         width: 100%;
         height: auto;
         max-height: 30vh;
+    }
+    
+    .model-selector {
+        padding: 6px 12px;
+    }
+    
+    .model-selector .n-select {
+        min-width: 150px !important;
     }
 }

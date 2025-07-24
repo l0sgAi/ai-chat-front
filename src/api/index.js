@@ -105,6 +105,9 @@ export const configApi = {
   
   // 删除配置
   deleteConfig: (id) => del(`/ai/config/delete?id=${id}`),
+  
+  // 获取可用模型列表
+  getModels: () => get(`/ai/config/getModels`),
 };
 
 // 导出所有API

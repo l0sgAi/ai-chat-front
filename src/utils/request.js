@@ -16,7 +16,7 @@ service.interceptors.request.use(
     const tokenName = localStorage.getItem('tokenName');
     const tokenValue = localStorage.getItem('tokenValue');
 
-    console.log('请求配置:', tokenName, tokenValue);
+    // console.log('请求配置:', tokenName, tokenValue);
     
     // 如果tokenName和tokenValue都存在，则添加到请求头中
     if (tokenName && tokenValue) {
