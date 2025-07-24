@@ -47,9 +47,9 @@
                                 <n-space :size="0" :wrap="false">
                                     <n-popconfirm @positive-click="deleteConversation(conv.id)" positive-text="确认" negative-text="取消">
                                         <template #trigger>
-                                            <n-button quaternary circle size="small">
+                                            <n-button quaternary circle size="tiny" style="margin: 0;">
                                                 <template #icon>
-                                                    <n-icon><trash-outline /></n-icon>
+                                                    <n-icon size="12"><trash-outline/></n-icon>
                                                 </template>
                                             </n-button>
                                         </template>
@@ -117,10 +117,14 @@
                 <n-layout-footer bordered class="chat-input-container">
                     <div class="chat-input-wrapper">
                         <n-input v-model:value="newMessage" type="textarea" round placeholder="输入消息..."
-                            @keyup.enter="sendMessage" class="chat-input" :autosize="{ minRows: 1, maxRows: 3 }" />
-                        <n-button type="primary" secondary circle class="send-button" @click="sendMessage">
+                            @keyup.enter="!isGenerating ? sendMessage() : null" class="chat-input" :autosize="{ minRows: 1, maxRows: 3 }" />
+                        <n-button type="primary" secondary circle class="send-button" 
+                                  @click="isGenerating ? stopGeneration() : sendMessage()">
                             <template #icon>
-                                <n-icon><send-outline /></n-icon>
+                                <n-icon>
+                                    <send-outline v-if="!isGenerating" />
+                                    <stop-outline v-else />
+                                </n-icon>
                             </template>
                         </n-button>
                     </div>
@@ -161,7 +165,8 @@ import {
     EllipsisHorizontalOutline,
     TrashOutline,
     CreateOutline,
-    Star
+    Star,
+    StopOutline
 } from '@vicons/ionicons5';
 
 import { Marked } from 'marked';
@@ -184,6 +189,10 @@ const activeConversationId = ref(null);
 // 会话列表数据
 const conversations = ref([]);
 const loading = ref(false);
+
+// AI生成状态控制
+const isGenerating = ref(false);
+const currentEventSource = ref(null);
 
 const chatContentRef = ref(null);
 // 截断标题到最长11个字符
@@ -466,7 +475,7 @@ const sendMessage = async () => {
         const response = await chatApi.sendMessage({
             question: messageContent,
             sessionId: activeConversationId.value,
-            modelId: 1, // TODO:添加默认模型ID，后续修改为可选择
+            modelId: 5, // TODO:添加默认模型ID，后续修改为可选择
             conversationId: activeConversationId.value
         });
 
@@ -512,9 +521,13 @@ const sendMessage = async () => {
             };
             messages.value.push(aiMsg);
 
+            // 设置生成状态
+            isGenerating.value = true;
+            
             // 建立SSE连接获取流式响应
             console.log('准备建立SSE连接...'); // 调试日志
             const eventSource = chatApi.createSSEConnection(streamSessionId);
+            currentEventSource.value = eventSource;
 
             eventSource.onmessage = (event) => {
                 try {
@@ -538,6 +551,8 @@ const sendMessage = async () => {
             eventSource.onerror = (error) => {
                 console.error('SSE连接错误:', error);
                 aiMsg.isStreaming = false;
+                isGenerating.value = false;
+                currentEventSource.value = null;
                 eventSource.close();
 
                 // 如果没有接收到任何内容，显示错误信息
@@ -556,6 +571,8 @@ const sendMessage = async () => {
             eventSource.addEventListener('close', () => {
                 console.log('SSE流已结束');
                 aiMsg.isStreaming = false;
+                isGenerating.value = false;
+                currentEventSource.value = null;
                 eventSource.close();
 
                 // 更新会话列表中的最后消息
@@ -573,6 +590,8 @@ const sendMessage = async () => {
                 if (aiMsg.isStreaming && !aiMsg.content) {
                     console.warn('SSE连接超时，未接收到数据');
                     aiMsg.isStreaming = false;
+                    isGenerating.value = false;
+                    currentEventSource.value = null;
                     aiMsg.content = '连接超时，请检查网络或重试。';
                     eventSource.close();
                     message.warning('连接超时，请重试');
@@ -581,13 +600,35 @@ const sendMessage = async () => {
 
         } else {
             message.error(`发送失败: ${response.message}`);
+            isGenerating.value = false;
         }
     } catch (error) {
         message.error(`发送失败: ${error.message}`);
+        isGenerating.value = false;
     }
 
     // 清空输入框
     newMessage.value = '';
+};
+
+// 停止AI生成
+const stopGeneration = () => {
+    if (currentEventSource.value) {
+        currentEventSource.value.close();
+        currentEventSource.value = null;
+    }
+    
+    // 找到正在生成的AI消息并停止流式状态
+    const lastMessage = messages.value[messages.value.length - 1];
+    if (lastMessage && lastMessage.sender === 'AI助手' && lastMessage.isStreaming) {
+        lastMessage.isStreaming = false;
+        if (!lastMessage.content) {
+            lastMessage.content = '生成已停止。';
+        }
+    }
+    
+    isGenerating.value = false;
+    message.info('已停止生成');
 };
 
 
