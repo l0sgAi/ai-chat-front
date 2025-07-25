@@ -508,44 +508,131 @@
     position: fixed;
     bottom: 0;
     width: 100%;
+    box-sizing: border-box;
 }
 
-.chat-input-wrapper {
-    display: flex;
-    align-items: left;
-    background-color: #030303;
-    border: none;
-    border-radius: 24px;
-    padding: 4px 16px;
-    transition: box-shadow 0.3s;
-    width: 70%;
+.chat-input-section {
+    max-width: 70%;
+    margin: 0;
+    background-color: #1a1a1a;
+    border-radius: 12px;
+    border: 1px solid #333;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-.chat-input:focus-within {
-    box-shadow: 0 0 0 2px rgba(24, 160, 88, 0.4);
+/* 上半部分：输入框区域 */
+.input-area {
+    padding: 16px;
+    background-color: #1a1a1a;
+    border-bottom: 1px solid #333;
 }
 
 .chat-input {
-    flex: 1;
-    border: none;
-    background: transparent;
-    padding: 12px 0;
+    background-color: transparent !important;
+    color: #fff !important;
     font-size: 16px;
-    outline: none;
-    color: #fff;
-    border: 1px solid #00816d;
-    border-radius: 24px;
+    line-height: 1.5;
+}
+
+.chat-input .n-input__input-el {
+    background-color: transparent !important;
+    color: #fff !important;
+    border: none !important;
+    padding: 8px 0 !important;
+}
+
+.chat-input .n-input__input-el::placeholder {
+    color: #888 !important;
+}
+
+.chat-input:focus-within {
+    box-shadow: none !important;
+}
+
+/* 下半部分：控制区域 */
+.control-area {
+    padding: 12px 16px;
+    background-color: #151515;
+    border-top: 1px solid #2a2a2a;
+}
+
+/* 模型选择区域 */
+.model-selection {
+    display: flex;
+    align-items: center;
+}
+
+.model-label {
+    color: #ccc;
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* 发送区域 */
+.send-area {
+    display: flex;
+    align-items: center;
+}
+
+.shortcut-hint {
+    color: #888;
+    font-size: 12px;
+    white-space: nowrap;
+    margin-right: 8px;
 }
 
 .send-button {
-    margin-left: 8px;
-    margin-bottom: 3px;
+    min-width: 80px;
+    height: 36px;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.send-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(24, 160, 88, 0.3);
+}
+
+.send-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
     .chat-sidebar {
         width: 240px;
+    }
+    
+    .chat-input-container {
+        padding: 12px 16px;
+    }
+    
+    .control-area {
+        flex-direction: column;
+        gap: 12px;
+        align-items: stretch;
+    }
+    
+    .control-area .n-space {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    
+    .model-selection,
+    .send-area {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .shortcut-hint {
+        text-align: center;
+        margin-right: 0;
+        margin-bottom: 8px;
     }
 }
 
@@ -574,5 +661,26 @@
     
     .model-selector .n-select {
         min-width: 150px !important;
+    }
+    
+    .chat-input-section {
+        margin: 0 8px;
+    }
+    
+    .input-area {
+        padding: 12px;
+    }
+    
+    .control-area {
+        padding: 8px 12px;
+    }
+    
+    .model-selection .n-select {
+        width: 100% !important;
+    }
+    
+    .send-button {
+        width: 100%;
+        min-width: auto;
     }
 }

@@ -81,14 +81,14 @@
                             'AI聊天'}}
                     </div>
                     <n-space align="center">
-                        <span>当前模型：</span>
+                        <!-- <span>当前模型：</span>
                         <n-select
                             v-model:value="selectedModelId"
                             :options="modelOptions"
                             placeholder="选择模型"
                             style="width: 200px;"
                             :loading="modelsLoading"
-                        />
+                        /> -->
                         <n-button @click="goToConfig" type="primary" secondary v-if="isAdmin">
                             <template #icon>
                                 <n-icon><settings-outline /></n-icon>
@@ -131,20 +131,60 @@
 
                 <!-- 底部输入区域 -->
                 <n-layout-footer bordered class="chat-input-container">
-                    <div class="chat-input-wrapper">
-                        <n-input v-model:value="newMessage" type="textarea" round placeholder="输入消息..."
-                            @keyup.enter="!isGenerating ? sendMessage() : null" class="chat-input" :autosize="{ minRows: 1, maxRows: 3 }" />
-                        <n-space align="center">
-                            <n-button type="primary" secondary circle class="send-button" 
-                                  @click="isGenerating ? stopGeneration() : sendMessage()">
-                            <template #icon>
-                                <n-icon>
-                                    <send-outline v-if="!isGenerating" />
-                                    <stop-outline v-else />
-                                </n-icon>
-                            </template>
-                        </n-button>
-                        </n-space>
+                    <div class="chat-input-section">
+                        <!-- 上半部分：输入框 -->
+                        <div class="input-area">
+                            <n-input 
+                                v-model:value="newMessage" 
+                                type="textarea" 
+                                placeholder="输入消息..."
+                                @keydown="handleKeyDown"
+                                class="chat-input" 
+                                :autosize="{ minRows: 2, maxRows: 4 }"
+                                :bordered="false"
+                            />
+                        </div>
+                        
+                        <!-- 下半部分：操作选项 -->
+                        <div class="control-area">
+                            <n-space justify="space-between" align="center" style="width: 100%;">
+                                <!-- 左侧：模型选择 -->
+                                <div class="model-selection">
+                                    <n-space align="center" size="small">
+                                        <span class="model-label">模型:</span>
+                                        <n-select
+                                            v-model:value="selectedModelId"
+                                            :options="modelOptions"
+                                            placeholder="选择模型"
+                                            size="small"
+                                            style="width: 180px;"
+                                            :loading="modelsLoading"
+                                        />
+                                    </n-space>
+                                </div>
+                                
+                                <!-- 右侧：发送按钮 -->
+                                <div class="send-area">
+                                    <n-space align="center" size="small">
+                                        <span class="shortcut-hint">Enter发送 • Shift+Enter换行</span>
+                                        <n-button 
+                                            type="primary" 
+                                            :disabled="(!isGenerating && !newMessage.trim()) || !selectedModelId"
+                                            @click="isGenerating ? stopGeneration() : sendMessage()"
+                                            class="send-button"
+                                        >
+                                            <template #icon>
+                                                <n-icon>
+                                                    <send-outline v-if="!isGenerating" />
+                                                    <stop-outline v-else />
+                                                </n-icon>
+                                            </template>
+                                            {{ isGenerating ? '停止' : '发送' }}
+                                        </n-button>
+                                    </n-space>
+                                </div>
+                            </n-space>
+                        </div>
                     </div>
                 </n-layout-footer>
             </n-layout>
@@ -501,6 +541,22 @@ const handleConversationAction = (key, convId) => {
     if (key === 'rename') {
         // 这里可以实现重命名功能
         message.info('重命名功能待实现');
+    }
+};
+
+// 处理键盘事件
+const handleKeyDown = (event) => {
+    // 如果按下的是Enter键
+    if (event.key === 'Enter') {
+        // 如果同时按下了Shift键，允许换行（不阻止默认行为）
+        if (event.shiftKey) {
+            return; // 允许默认的换行行为
+        }
+        // 如果只按下Enter键，阻止默认行为并发送消息
+        event.preventDefault();
+        if (!isGenerating.value && newMessage.value.trim() && selectedModelId.value) {
+            sendMessage();
+        }
     }
 };
 
