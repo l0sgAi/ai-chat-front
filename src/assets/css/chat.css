@@ -822,3 +822,40 @@
     margin-bottom: 15px;
   }
 }
+
+/* 图片预览模态框样式 */
+.image-preview-modal {
+  max-width: 90dvw;
+  max-height: 90dvh;
+}
+
+.image-preview-modal .n-card {
+  background-color: rgba(0, 0, 0, 0.9);
+  border: none;
+  border-radius: 8px;
+}
+
+.image-preview-modal .n-card__content {
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.image-preview-modal img {
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+/* 聊天消息中的图片点击效果 */
+.message-content.markdown-body img.chat-image-preview {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.message-content.markdown-body img.chat-image-preview:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}

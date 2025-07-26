@@ -237,7 +237,8 @@ import {
     NUpload,
     NUploadDragger,
     NImage,
-    NTag
+    NTag,
+    NModal
 } from 'naive-ui';
 import {
     ChatbubbleOutline,
@@ -292,6 +293,10 @@ const isUploading = ref(false);
 const isGenerating = ref(false);
 const currentEventSource = ref(null);
 const currentStreamSessionId = ref(null);
+
+// 图片预览相关
+const showImageModal = ref(false);
+const previewImageUrl = ref('');
 
 const chatContentRef = ref(null);
 
@@ -1024,6 +1029,15 @@ const formatMessageContent = (content) => {
             console.error('降级处理也失败:', fallbackError);
             return String(content || '');
         }
+    }
+};
+
+// 处理图片点击事件
+const handleImageClick = (event) => {
+    // 检查点击的元素是否是图片
+    if (event.target.tagName === 'IMG' && event.target.classList.contains('chat-image-preview')) {
+        previewImageUrl.value = event.target.src;
+        showImageModal.value = true;
     }
 };
 
