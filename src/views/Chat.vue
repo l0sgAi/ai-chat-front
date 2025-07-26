@@ -232,11 +232,13 @@ import {
 import { Marked } from 'marked';
 import hljs from 'highlight.js';
 import { markedHighlight } from "marked-highlight";
+import katex from 'katex';
 
 // 引入独立的CSS文件
 import '../assets/css/chat.css';
 import 'github-markdown-css/github-markdown.css';
 import 'highlight.js/styles/monokai-sublime.css';
+import 'katex/dist/katex.min.css';
 
 const router = useRouter();
 const message = useMessage();
@@ -791,6 +793,41 @@ const stopGeneration = async () => {
 
 
 
+// 渲染数学公式的辅助函数
+const renderMath = (text) => {
+    // 先处理块级公式 $$...$$
+    text = text.replace(/\$\$([\s\S]*?)\$\$/g, (match, formula) => {
+        try {
+            const rendered = katex.renderToString(formula.trim(), {
+                displayMode: true,
+                throwOnError: false,
+                strict: false
+            });
+            return `<div class="math-block">${rendered}</div>`;
+        } catch (error) {
+            console.warn('块级数学公式渲染失败:', error, formula);
+            return `<div class="math-error">$$${formula}$$</div>`;
+        }
+    });
+    
+    // 再处理行内公式 $...$（避免与已处理的块级公式冲突）
+    text = text.replace(/(?<!\$)\$(?!\$)([^$\n]+?)\$(?!\$)/g, (match, formula) => {
+        try {
+            const rendered = katex.renderToString(formula.trim(), {
+                displayMode: false,
+                throwOnError: false,
+                strict: false
+            });
+            return `<span class="math-inline">${rendered}</span>`;
+        } catch (error) {
+            console.warn('行内数学公式渲染失败:', error, formula);
+            return `<span class="math-error">$${formula}$</span>`;
+        }
+    });
+    
+    return text;
+};
+
 // 格式化消息内容
 const formatMessageContent = (content) => {
     if (!content) return '';
@@ -821,6 +858,9 @@ const formatMessageContent = (content) => {
             .replace(/&quot;/g, '"')
             .replace(/&#39;/g, "'");
 
+        // 先渲染数学公式（在Markdown解析之前）
+        processedContent = renderMath(processedContent);
+
         // 使用marked解析Markdown
         // console.log('格式化消息内容:', processedContent);
         const marked = new Marked(
@@ -847,7 +887,7 @@ const formatMessageContent = (content) => {
         // 降级到简单的文本替换
         try {
             const fallbackStr = typeof content === 'string' ? content : String(content);
-            return fallbackStr
+            let fallbackContent = fallbackStr
                 .replace(/<br\s*\/?>/gi, '<br>')
                 .replace(/&nbsp;/g, ' ')
                 .replace(/&lt;/g, '<')
@@ -858,6 +898,10 @@ const formatMessageContent = (content) => {
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                 .replace(/\*(.*?)\*/g, '<em>$1</em>')
                 .replace(/`(.*?)`/g, '<code>$1</code>');
+            
+            // 即使在降级模式下也尝试渲染数学公式
+            fallbackContent = renderMath(fallbackContent);
+            return fallbackContent;
         } catch (fallbackError) {
             console.error('降级处理也失败:', fallbackError);
             return String(content || '');
