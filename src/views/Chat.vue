@@ -45,11 +45,12 @@
                                 </div>
 
                                 <n-space :size="0" :wrap="false">
-                                    <n-popconfirm @positive-click="deleteConversation(conv.id)" positive-text="确认" negative-text="取消">
+                                    <n-popconfirm @positive-click="deleteConversation(conv.id)" positive-text="确认"
+                                        negative-text="取消">
                                         <template #trigger>
                                             <n-button quaternary circle size="tiny" style="margin: 0;">
                                                 <template #icon>
-                                                    <n-icon size="12"><trash-outline/></n-icon>
+                                                    <n-icon size="12"><trash-outline /></n-icon>
                                                 </template>
                                             </n-button>
                                         </template>
@@ -81,14 +82,6 @@
                             'AI聊天'}}
                     </div>
                     <n-space align="center">
-                        <!-- <span>当前模型：</span>
-                        <n-select
-                            v-model:value="selectedModelId"
-                            :options="modelOptions"
-                            placeholder="选择模型"
-                            style="width: 200px;"
-                            :loading="modelsLoading"
-                        /> -->
                         <n-button @click="goToConfig" type="primary" secondary v-if="isAdmin">
                             <template #icon>
                                 <n-icon><settings-outline /></n-icon>
@@ -105,7 +98,7 @@
                 </n-layout-header>
 
                 <!-- 聊天消息区域 -->
-                <n-layout-content ref="chatContentRef" class="chat-messages">
+                <n-layout-content ref="chatContentRef" class="chat-messages" @click="handleImageClick">
                     <template v-if="messages.length > 0">
                         <div v-for="msg in messages" :key="msg.id"
                             :class="['message', msg.sender === username ? 'user-message' : 'ai-message']">
@@ -134,45 +127,63 @@
                     <div class="chat-input-section">
                         <!-- 上半部分：输入框 -->
                         <div class="input-area">
-                            <n-input 
-                                v-model:value="newMessage" 
-                                type="textarea" 
-                                placeholder="输入消息..."
-                                @keydown="handleKeyDown"
-                                class="chat-input" 
-                                :autosize="{ minRows: 2, maxRows: 4 }"
-                                :bordered="false"
-                            />
+                            <n-input v-model:value="newMessage" type="textarea" placeholder="输入消息..."
+                                @keydown="handleKeyDown" class="chat-input" :autosize="{ minRows: 2, maxRows: 4 }"
+                                :bordered="false" />
                         </div>
-                        
+
+                        <!-- 图片预览区域（仅在视觉模型且有上传图片时显示） -->
+                        <div v-if="isVisionModel && uploadedImages.length > 0" class="image-preview-area">
+                            <n-space size="small">
+                                <div v-for="image in uploadedImages" :key="image.id" class="uploaded-image-item">
+                                    <div class="image-container">
+                                        <n-image :src="image.url" :alt="image.name" width="200" height="200"
+                                            object-fit="cover" />
+                                        <n-button size="tiny" quaternary circle class="remove-image-btn"
+                                            @click="removeImage(image.id)"
+                                            style="background: rgba(0,0,0,0.5); color: white;">
+                                            <template #icon>
+                                                <n-icon size="10"><close-outline /></n-icon>
+                                            </template>
+                                        </n-button>
+                                    </div>
+                                    <span class="image-name">{{ image.name }}</span>
+                                </div>
+                            </n-space>
+                        </div>
+
                         <!-- 下半部分：操作选项 -->
                         <div class="control-area">
                             <n-space justify="space-between" align="center" style="width: 100%;">
-                                <!-- 左侧：模型选择 -->
+                                <!-- 左侧：模型选择和图片上传 -->
                                 <div class="model-selection">
                                     <n-space align="center" size="small">
                                         <span class="model-label">模型:</span>
-                                        <n-select
-                                            v-model:value="selectedModelId"
-                                            :options="modelOptions"
-                                            placeholder="选择模型"
-                                            size="small"
-                                            style="width: 180px;"
-                                            :loading="modelsLoading"
-                                        />
+                                        <n-select v-model:value="selectedModelId" :options="modelOptions"
+                                            placeholder="选择模型" size="small" style="width: 180px;"
+                                            :loading="modelsLoading" />
+                                        <!-- 视觉模型时显示图片上传按钮 -->
+                                        <n-upload v-if="isVisionModel" :custom-request="handleImageUpload"
+                                            accept="image/*" :show-file-list="false" multiple>
+                                            <n-button ghost="true" size="small" type="primary" secondary
+                                                :loading="isUploading">
+                                                <template #icon>
+                                                    <n-icon><image-outline /></n-icon>
+                                                </template>
+                                                上传图片
+                                            </n-button>
+                                        </n-upload>
                                     </n-space>
                                 </div>
-                                
+
                                 <!-- 右侧：发送按钮 -->
                                 <div class="send-area">
                                     <n-space align="center" size="small">
                                         <span class="shortcut-hint">Enter发送 • Shift+Enter换行</span>
-                                        <n-button 
-                                            type="primary" 
+                                        <n-button type="primary"
                                             :disabled="(!isGenerating && !newMessage.trim()) || !selectedModelId"
                                             @click="isGenerating ? stopGeneration() : sendMessage()"
-                                            class="send-button"
-                                        >
+                                            class="send-button">
                                             <template #icon>
                                                 <n-icon>
                                                     <send-outline v-if="!isGenerating" />
@@ -190,11 +201,19 @@
             </n-layout>
         </div>
     </n-config-provider>
+
+    <!-- Naive UI 图片预览 Modal -->
+    <n-modal v-model:show="showImageModal" preset="card" class="image-preview-modal" title="">
+        <!-- title 置空，也可以写“图片预览” -->
+        <template #header></template> <!-- 隐藏默认头部，让图片更大 -->
+        <img :src="previewImageUrl" style="width: 100%; height: auto; display: block;" />
+    </n-modal>
+
 </template>
 
 <script setup>
 import { userApi, chatApi, sessionApi, messageApi, configApi } from '../api';
-import { ref, onMounted, nextTick, watch } from 'vue';
+import { ref, onMounted, nextTick, watch, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMessage, useDialog, darkTheme } from 'naive-ui';
 import { h } from 'vue';
@@ -214,7 +233,11 @@ import {
     NEmpty,
     NSpin,
     NPopconfirm,
-    NSelect
+    NSelect,
+    NUpload,
+    NUploadDragger,
+    NImage,
+    NTag
 } from 'naive-ui';
 import {
     ChatbubbleOutline,
@@ -226,7 +249,9 @@ import {
     CreateOutline,
     Star,
     StopOutline,
-    SettingsOutline
+    SettingsOutline,
+    ImageOutline,
+    CloseOutline
 } from '@vicons/ionicons5';
 
 import { Marked } from 'marked';
@@ -257,6 +282,11 @@ const loading = ref(false);
 const selectedModelId = ref(null);
 const modelOptions = ref([]);
 const modelsLoading = ref(false);
+const selectedModelData = ref(null);
+
+// 图片上传相关
+const uploadedImages = ref([]);
+const isUploading = ref(false);
 
 // AI生成状态控制
 const isGenerating = ref(false);
@@ -264,6 +294,12 @@ const currentEventSource = ref(null);
 const currentStreamSessionId = ref(null);
 
 const chatContentRef = ref(null);
+
+// 计算属性：判断当前选择的模型是否为视觉模型
+const isVisionModel = computed(() => {
+    return selectedModelData.value && selectedModelData.value.modelType === 2;
+});
+
 // 截断标题到最长11个字符
 const truncateTitle = (title) => {
     if (!title) return '新会话';
@@ -309,19 +345,32 @@ const loadModels = async () => {
         modelsLoading.value = true;
         const response = await configApi.getModels();
         if (response.code === 200) {
-            modelOptions.value = response.data.map(model => ({
+            const modelsData = response.data;
+            modelOptions.value = modelsData.map(model => ({
                 label: model.displayName,
                 value: model.id
             }));
-            
+
             // 设置默认选中的模型（isDefault为1的模型）
-            const defaultModel = response.data.find(model => model.isDefault === 1);
+            const defaultModel = modelsData.find(model => model.isDefault === 1);
             if (defaultModel) {
                 selectedModelId.value = defaultModel.id;
-            } else if (response.data.length > 0) {
+                selectedModelData.value = defaultModel;
+            } else if (modelsData.length > 0) {
                 // 如果没有默认模型，选择第一个
-                selectedModelId.value = response.data[0].id;
+                selectedModelId.value = modelsData[0].id;
+                selectedModelData.value = modelsData[0];
             }
+
+            // 监听模型选择变化，更新模型数据
+            watch(selectedModelId, (newModelId) => {
+                const selectedModel = modelsData.find(model => model.id === newModelId);
+                selectedModelData.value = selectedModel || null;
+                // 当切换模型时，清空已上传的图片
+                if (uploadedImages.value.length > 0) {
+                    uploadedImages.value = [];
+                }
+            });
         } else {
             message.error(`加载模型列表失败: ${response.message}`);
         }
@@ -344,7 +393,7 @@ const scrollToBottom = async () => {
                 scrollContainer.querySelector('.n-layout-scroll-container') ||
                 scrollContainer.querySelector('[class*="scroll"]') ||
                 scrollContainer.firstElementChild;
-            console.log('Actual scroll container:', actualScrollContainer);
+            // console.log('Actual scroll container:', actualScrollContainer);
             if (actualScrollContainer) {
                 actualScrollContainer.scrollTo({
                     top: actualScrollContainer.scrollHeight,
@@ -365,7 +414,7 @@ onMounted(async () => {
     // 配置marked使用highlight.js进行代码高亮
     loadConversations();
     loadModels(); // 加载模型列表
-    
+
     // 获取用户信息，检查是否为管理员
     try {
         const response = await userApi.getUserInfo();
@@ -562,9 +611,59 @@ const handleKeyDown = (event) => {
     }
 };
 
+// 图片上传处理
+const handleImageUpload = async ({ file, onFinish, onError }) => {
+    try {
+        isUploading.value = true;
+
+        // 创建FormData
+        const formData = new FormData();
+        formData.append('file', file.file);
+
+        // 调用上传API
+        const response = await fetch('/api/system/file/fileUpload', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+
+        const result = await response.json();
+
+        if (result.code === 200) {
+            // 只添加当前上传的图片到列表
+            const newImage = {
+                id: Date.now() + Math.random(),
+                url: result.data,
+                name: file.name,
+                size: file.size, // 添加文件大小用于去重
+                status: 'success'
+            };
+            uploadedImages.value.push(newImage);
+            message.success('图片上传成功');
+            onFinish && onFinish();
+        } else {
+            message.error(`图片上传失败: ${result.message}`);
+            onError && onError();
+        }
+    } catch (error) {
+        console.error('图片上传失败:', error);
+        message.error('图片上传失败');
+        onError && onError();
+    } finally {
+        isUploading.value = false;
+    }
+};
+
+// 移除已上传的图片
+const removeImage = (imageId) => {
+    uploadedImages.value = uploadedImages.value.filter(img => img.id !== imageId);
+};
+
 const sendMessage = async () => {
     if (!newMessage.value.trim()) return;
-    
+
     // 检查是否已选择模型
     if (!selectedModelId.value) {
         message.error('请先选择一个模型');
@@ -582,18 +681,33 @@ const sendMessage = async () => {
             }
         }
 
+        // 立即清空输入框
+        const messageContent = newMessage.value.trim();
+        newMessage.value = '';
+
+        // 构造图片 HTML（如果使用视觉模型且有图片）
+        let imageHtml = '';
+        if (uploadedImages.value.length > 0) {
+            imageHtml = uploadedImages.value.map(img =>
+                `<div style="margin-bottom: 8px;">
+                        <img src="${img.url}" alt="${img.name}" 
+                        class="chat-image-preview" 
+                        style="max-width: 30%; 
+                        border-radius: 8px;" />
+                    </div>`
+            ).join('');
+        }
+        // 构造完整消息内容
+        const fullContent = imageHtml + (messageContent ? `<p>${messageContent}</p>` : '');
+
         // 添加用户消息到当前会话
         const userMsg = {
             id: Date.now(),
             sender: username.value,
-            content: newMessage.value.trim(),
+            content: fullContent,
             time: new Date().toLocaleTimeString()
         };
         messages.value.push(userMsg);
-
-        // 立即清空输入框
-        const messageContent = newMessage.value.trim();
-        newMessage.value = '';
 
         // 更新当前会话的最后消息和时间
         const currentConv = conversations.value.find(conv => conv.id === activeConversationId.value);
@@ -603,19 +717,29 @@ const sendMessage = async () => {
             currentConv.messages = [...messages.value];
         }
 
-        // 发送消息到后端获取sessionId
-        const response = await chatApi.sendMessage({
-            question: messageContent,
+        // 准备发送的数据
+        const sendData = {
+            question: fullContent,
             sessionId: activeConversationId.value,
             modelId: selectedModelId.value, // 使用选中的模型ID
             conversationId: activeConversationId.value
-        });
+        };
 
-        console.log('发送消息API响应:', response); // 添加调试日志
+        // 如果是视觉模型且有上传的图片，添加图片URL列表
+        if (isVisionModel.value && uploadedImages.value.length > 0) {
+            sendData.urlList = uploadedImages.value.map(img => img.url);
+        }
+
+        // 发送消息到后端获取sessionId
+        const response = await chatApi.sendMessage(sendData);
+
+        // console.log('发送消息API响应:', response); // 添加调试日志
+
+        // 先清空目前的上传列表
+        uploadedImages.value = [];
 
         if (response.code === 200) {
             const streamSessionId = response.data; // 后端返回的sessionId
-            console.log('获取到streamSessionId:', streamSessionId); // 调试日志
 
             // 保存用户消息到数据库
             let messagePairId = null;
@@ -623,7 +747,7 @@ const sendMessage = async () => {
                 const messageData = {
                     sessionId: activeConversationId.value,
                     sseSessionId: streamSessionId, // 使用获取到的SSE会话ID
-                    userContent: messageContent,
+                    userContent: fullContent,
                     aiContent: '', // AI回复内容暂时为空
                     modelUsed: selectedModelId.value, // 默认模型ID
                     status: 0, // 0-生成中
@@ -656,7 +780,7 @@ const sendMessage = async () => {
             // 设置生成状态
             isGenerating.value = true;
             currentStreamSessionId.value = streamSessionId;
-            
+
             // 建立SSE连接获取流式响应
             console.log('准备建立SSE连接...'); // 调试日志
             const eventSource = chatApi.createSSEConnection(streamSessionId);
@@ -755,7 +879,7 @@ const stopGeneration = async () => {
         console.warn('没有找到当前的SSE会话ID');
         return;
     }
-    
+
     try {
         // 调用后端停止接口
         const response = await chatApi.stopGeneration(currentStreamSessionId.value);
@@ -769,13 +893,13 @@ const stopGeneration = async () => {
         console.error('调用停止接口失败:', error);
         message.error(`停止生成失败: ${error.message}`);
     }
-    
+
     // 关闭前端SSE连接
     if (currentEventSource.value) {
         currentEventSource.value.close();
         currentEventSource.value = null;
     }
-    
+
     // 找到正在生成的AI消息并停止流式状态
     const lastMessage = messages.value[messages.value.length - 1];
     if (lastMessage && lastMessage.sender === 'AI助手' && lastMessage.isStreaming) {
@@ -784,7 +908,7 @@ const stopGeneration = async () => {
             lastMessage.content = '生成已停止。';
         }
     }
-    
+
     // 重置状态
     isGenerating.value = false;
     currentStreamSessionId.value = null;
@@ -809,7 +933,7 @@ const renderMath = (text) => {
             return `<div class="math-error">$$${formula}$$</div>`;
         }
     });
-    
+
     // 再处理行内公式 $...$（避免与已处理的块级公式冲突）
     text = text.replace(/(?<!\$)\$(?!\$)([^$\n]+?)\$(?!\$)/g, (match, formula) => {
         try {
@@ -824,7 +948,7 @@ const renderMath = (text) => {
             return `<span class="math-error">$${formula}$</span>`;
         }
     });
-    
+
     return text;
 };
 
@@ -874,12 +998,6 @@ const formatMessageContent = (content) => {
             })
         );
         const html = marked.parse(processedContent);
-        // console.log('解析后消息内容:', html);
-
-        // 检查是否包含代码块
-        if (html.includes('<pre><code')) {
-            console.log('检测到代码块，应用highlight.js样式');
-        }
 
         return html;
     } catch (error) {
@@ -898,7 +1016,7 @@ const formatMessageContent = (content) => {
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                 .replace(/\*(.*?)\*/g, '<em>$1</em>')
                 .replace(/`(.*?)`/g, '<code>$1</code>');
-            
+
             // 即使在降级模式下也尝试渲染数学公式
             fallbackContent = renderMath(fallbackContent);
             return fallbackContent;

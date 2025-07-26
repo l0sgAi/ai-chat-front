@@ -409,6 +409,46 @@
   color: #e6edf3;
 }
 
+/* 消息中的图片样式 */
+.message-images {
+  margin-bottom: 8px;
+}
+
+.message-image-item {
+  display: inline-block;
+  margin-right: 8px;
+  margin-bottom: 4px;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease;
+}
+
+.message-image-item:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.message-image-item:last-child {
+  margin-right: 0;
+}
+
+/* markdown渲染的图片样式 */
+.message-content.markdown-body img {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 6px;
+  margin: 4px 8px 4px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease;
+  object-fit: cover;
+}
+
+.message-content.markdown-body img:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
 .message-content.markdown-body th {
   background-color: #161b22;
   font-weight: 600;
@@ -635,6 +675,60 @@
   margin: 1em 0;
 }
 
+/* 图片预览区域样式 */
+.image-preview-area {
+  padding: 12px;
+  background-color: transparent;
+  border-radius: 8px;
+  border: none;
+  height: 25dvh;
+  overflow-x: auto;
+  overflow-y: hidden;
+  display: flex;
+  align-items: center;
+}
+
+.uploaded-image-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.image-container {
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.remove-image-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  background: rgba(0, 0, 0, 0.6) !important;
+  border: none !important;
+  backdrop-filter: blur(2px);
+  transition: all 0.2s ease;
+}
+
+.remove-image-btn:hover {
+  background: rgba(0, 0, 0, 0.8) !important;
+  transform: scale(1.1);
+}
+
+.image-name {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  max-width: 200px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .chat-sidebar {
@@ -722,5 +816,9 @@
   .send-button {
     width: 100%;
     min-width: auto;
+  }
+
+  .message-item {
+    margin-bottom: 15px;
   }
 }
