@@ -101,7 +101,8 @@
                 <n-layout-content ref="chatContentRef" class="chat-messages" @click="handleImageClick">
                     <template v-if="messages.length > 0">
                         <div v-for="msg in messages" :key="msg.id"
-                            :class="['message', msg.sender === username ? 'user-message' : 'ai-message']">
+                            :class="['message', msg.sender === username ? 'user-message' : 'ai-message']"
+                            :data-message-id="msg.id">
                             <div class="message-bubble">
                                 <div class="message-header">
                                     <span class="sender">{{ msg.sender }}</span>
@@ -557,32 +558,31 @@ const switchConversation = async (convId) => {
 
             // 将数据库中的消息转换为前端消息格式
             const historyMessages = sortedData.map(msgPair => {
-                // console.log('处理消息对:', msgPair);
-                const messages = [];
+                const pairMessages = [];
 
                 // 添加用户消息
                 if (msgPair.userContent) {
-                    messages.push({
-                        id: `user_${msgPair.id}`,
+                    pairMessages.push({
+                        id: `user-${msgPair.id}`, // 使用可预测的唯一ID
                         sender: username.value,
                         content: msgPair.userContent,
                         time: new Date(msgPair.createTime).toLocaleTimeString(),
-                        createTime: msgPair.createTime // 保存原始时间用于排序
+                        createTime: msgPair.createTime
                     });
                 }
 
                 // 添加AI回复消息
                 if (msgPair.aiContent) {
-                    messages.push({
-                        id: `ai_${msgPair.id}`,
+                    pairMessages.push({
+                        id: `ai-${msgPair.id}`, // 使用可预测的唯一ID
                         sender: 'AI助手',
                         content: msgPair.aiContent,
                         time: msgPair.responseTime ? new Date(msgPair.responseTime).toLocaleTimeString() : new Date(msgPair.createTime).toLocaleTimeString(),
-                        createTime: msgPair.responseTime || msgPair.createTime // 保存原始时间用于排序
+                        createTime: msgPair.responseTime || msgPair.createTime
                     });
                 }
 
-                return messages;
+                return pairMessages;
             }).flat();
 
             // console.log('转换后的历史消息:', historyMessages);
@@ -800,7 +800,7 @@ const sendMessage = async () => {
 
         // 添加用户消息到当前会话
         const userMsg = {
-            id: Date.now(),
+            id: `local-user-${Date.now()}`,
             sender: username.value,
             content: fullContent,
             time: new Date().toLocaleTimeString()
@@ -867,11 +867,12 @@ const sendMessage = async () => {
 
             // 创建AI消息占位符
             const aiMsg = {
-                id: Date.now() + 1,
+                id: `local-ai-${Date.now()}`,
                 sender: 'AI助手',
                 content: '',
                 time: new Date().toLocaleTimeString(),
-                isStreaming: true
+                isStreaming: true,
+                messagePairId: messagePairId // 关联消息对ID
             };
             messages.value.push(aiMsg);
 
@@ -1233,7 +1234,7 @@ const getMatchedContent = (result) => {
     // 如果都不匹配，默认显示用户内容
     return {
         type: 'user',
-        content: '⚠️[无匹配字段]⚠️' + userContent
+        content: '⚠️[非完全匹配]⚠️' + userContent
     };
 };
 
@@ -1288,17 +1289,23 @@ const jumpToMessage = async (result) => {
         // 等待DOM更新后滚动到对应消息
         await nextTick();
 
+        // 确定目标消息的唯一ID
+        const matchedInfo = getMatchedContent(result);
+        const targetMessageId = `${matchedInfo.type}-${result.id}`;
+
         // 查找对应的消息元素并滚动到该位置
-        const messageElements = document.querySelectorAll('.message');
-        for (let element of messageElements) {
-            const messageContent = element.querySelector('.message-content');
-            if (messageContent && (
-                messageContent.textContent.includes(result.userContent) ||
-                messageContent.textContent.includes(result.aiContent)
-            )) {
-                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                break;
-            }
+        const targetElement = document.querySelector(`[data-message-id='${targetMessageId}']`);
+
+        if (targetElement) {
+            targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // 添加高亮效果
+            targetElement.classList.add('highlight');
+            setTimeout(() => {
+                targetElement.classList.remove('highlight');
+            }, 2000); // 2秒后移除高亮
+        } else {
+            message.error('未能在当前会话中找到该消息，可能已被删除或更新。');
         }
 
         message.success('已跳转到相关消息');
