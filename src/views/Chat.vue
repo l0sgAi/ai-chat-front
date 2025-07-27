@@ -5,13 +5,21 @@
             <n-layout-sider bordered content-style="padding: 0;" class="chat-sidebar" style="height: 100dvh;">
                 <div class="sidebar-header">
                     <span class="sidebar-title">会话列表</span>
-                    <n-button quaternary circle @click="prepareNewConversation">
-                        <template #icon>
-                            <n-icon><add-outline /></n-icon>
-                        </template>
-                    </n-button>
+                    <n-space :size="4">
+                        <n-button quaternary circle @click="openSearchModal">
+                            <template #icon>
+                                <n-icon><search-outline /></n-icon>
+                            </template>
+                        </n-button>
+                        <n-button quaternary circle @click="prepareNewConversation">
+                            <template #icon>
+                                <n-icon><add-outline /></n-icon>
+                            </template>
+                        </n-button>
+                    </n-space>
                 </div>
 
+                <!-- 会话列表 -->
                 <div class="conversation-list">
                     <template v-if="loading">
                         <div class="loading-container">
@@ -56,14 +64,6 @@
                                         </template>
                                         确定要删除会话 "{{ conv.originalTitle }}" 吗？此操作不可撤销。
                                     </n-popconfirm>
-                                    <!-- <n-dropdown :options="conversationOptions"
-                                        @select="(key) => handleConversationAction(key, conv.id)">
-                                        <n-button quaternary circle size="small">
-                                            <template #icon>
-                                                <n-icon><ellipsis-horizontal-outline /></n-icon>
-                                            </template>
-                                        </n-button>
-                                    </n-dropdown> -->
                                 </n-space>
                             </n-space>
                         </div>
@@ -204,10 +204,92 @@
 
     <!-- Naive UI 图片预览 Modal -->
     <n-modal v-model:show="showImageModal" preset="card" class="image-preview-modal" title="">
-        <!-- title 置空，也可以写“图片预览” -->
+        <!-- title 置空，也可以写"图片预览" -->
         <template #header></template> <!-- 隐藏默认头部，让图片更大 -->
         <img :src="previewImageUrl" style="width: 100%; height: auto; display: block;" />
     </n-modal>
+
+    <!-- 全局搜索 Modal -->
+    <n-config-provider :theme="darkTheme">
+        <n-modal v-model:show="showSearchModal" preset="card" class="search-modal" title="全局搜索"
+            style="max-width: 60vw;">
+            <div class="search-modal-content">
+                <!-- 搜索输入框 -->
+                <div class="search-input-section">
+                    <n-input v-model:value="searchKeyword" placeholder="搜索消息内容..." clearable @input="handleSearchInput"
+                        @clear="clearSearch" size="medium" class="search-modal-input">
+                        <template #prefix>
+                            <n-icon><search-outline /></n-icon>
+                        </template>
+                    </n-input>
+                </div>
+
+                <!-- 搜索结果区域 -->
+                <div class="search-results-section">
+                    <!-- 搜索结果列表 -->
+                    <div v-if="searchResults.length > 0" class="search-results">
+                        <div class="search-results-header">
+                            <span>搜索结果 ({{ searchResults.length }})</span>
+                        </div>
+                        <div class="search-results-list">
+                            <div v-for="result in searchResults" :key="result.id" class="search-result-item"
+                                @click="jumpToMessage(result)">
+                                <div class="search-result-content">
+                                    <!-- 根据匹配优先级显示内容 -->
+                                    <template v-if="getMatchedContent(result).type === 'user'">
+                                        <div class="search-result-user">
+                                            <n-icon size="25" class="search-result-icon"><person-outline /></n-icon>
+                                            <span class="search-result-text"
+                                                v-html="highlightKeyword(getMatchedContent(result).content)"></span>
+                                        </div>
+                                    </template>
+                                    <template v-else>
+                                        <div class="search-result-ai">
+                                            <n-icon size="25" class="search-result-icon"><chatbubble-outline /></n-icon>
+                                            <span class="search-result-text"
+                                                v-html="highlightKeyword(getMatchedContent(result).content)"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                                <div class="search-result-time">
+                                    <n-time :time="new Date(result.createTime)" format="MM-dd HH:mm" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 无搜索结果提示 -->
+                    <div v-if="searchKeyword && searchResults.length === 0 && !searchLoading" class="no-search-results">
+                        <n-empty description="无搜索结果">
+                            <template #icon>
+                                <n-icon>
+                                    <AlertCircleSharp />
+                                </n-icon>
+                            </template>
+                        </n-empty>
+                    </div>
+
+                    <!-- 搜索加载状态 -->
+                    <div v-if="searchLoading" class="search-loading">
+                        <n-spin size="medium" />
+                        <span>搜索中...</span>
+                    </div>
+
+                    <!-- 初始状态提示 -->
+                    <div v-if="!searchKeyword && searchResults.length === 0 && !searchLoading"
+                        class="search-placeholder">
+                        <n-empty description="请在上方输入全文检索内容">
+                            <template #icon>
+                                <n-icon>
+                                    <FileTrayFullSharp />
+                                </n-icon>
+                            </template>
+                        </n-empty>
+                    </div>
+                </div>
+            </div>
+        </n-modal>
+    </n-config-provider>
 
 </template>
 
@@ -245,14 +327,17 @@ import {
     AddOutline,
     SendOutline,
     LogOutOutline,
-    EllipsisHorizontalOutline,
+    FileTrayFullSharp,
     TrashOutline,
     CreateOutline,
+    AlertCircleSharp,
     Star,
     StopOutline,
     SettingsOutline,
     ImageOutline,
-    CloseOutline
+    CloseOutline,
+    SearchOutline,
+    PersonOutline
 } from '@vicons/ionicons5';
 
 import { Marked } from 'marked';
@@ -297,6 +382,14 @@ const currentStreamSessionId = ref(null);
 // 图片预览相关
 const showImageModal = ref(false);
 const previewImageUrl = ref('');
+
+// 全局搜索相关
+const searchKeyword = ref('');
+const searchResults = ref([]);
+const isSearching = ref(false);
+const searchLoading = ref(false);
+const showSearchModal = ref(false);
+let searchTimeout = null;
 
 const chatContentRef = ref(null);
 
@@ -1038,6 +1131,187 @@ const handleImageClick = (event) => {
     if (event.target.tagName === 'IMG' && event.target.classList.contains('chat-image-preview')) {
         previewImageUrl.value = event.target.src;
         showImageModal.value = true;
+    }
+};
+
+// 全局搜索相关方法
+const openSearchModal = () => {
+    showSearchModal.value = true;
+    // 清空之前的搜索状态
+    searchKeyword.value = '';
+    searchResults.value = [];
+    isSearching.value = false;
+    searchLoading.value = false;
+};
+
+const handleSearchInput = () => {
+    // 清除之前的定时器
+    if (searchTimeout) {
+        clearTimeout(searchTimeout);
+    }
+
+    // 如果搜索关键词为空，清空搜索结果
+    if (!searchKeyword.value.trim()) {
+        searchResults.value = [];
+        searchLoading.value = false;
+        return;
+    }
+
+    // 设置防抖，500ms后执行搜索
+    searchTimeout = setTimeout(() => {
+        performGlobalSearch();
+    }, 500);
+};
+
+const performGlobalSearch = async () => {
+    if (!searchKeyword.value.trim()) {
+        return;
+    }
+
+    try {
+        searchLoading.value = true;
+        isSearching.value = true;
+
+        const response = await messageApi.globalQuery(searchKeyword.value.trim());
+
+        if (response.code === 200) {
+            searchResults.value = response.data || [];
+        } else {
+            message.error(`搜索失败: ${response.message}`);
+            searchResults.value = [];
+        }
+    } catch (error) {
+        message.error(`搜索失败: ${error.message}`);
+        searchResults.value = [];
+    } finally {
+        searchLoading.value = false;
+    }
+};
+
+const clearSearch = () => {
+    searchKeyword.value = '';
+    searchResults.value = [];
+    isSearching.value = false;
+    searchLoading.value = false;
+    showSearchModal.value = false;
+
+    if (searchTimeout) {
+        clearTimeout(searchTimeout);
+        searchTimeout = null;
+    }
+};
+
+// 获取匹配内容的优先级和类型
+const getMatchedContent = (result) => {
+    if (!searchKeyword.value.trim()) {
+        return { type: 'user', content: result.userContent };
+    }
+
+    const keyword = searchKeyword.value.trim().toLowerCase();
+    const userContent = result.userContent || '';
+    const aiContent = result.aiContent || '';
+
+    const userMatches = userContent.toLowerCase().includes(keyword);
+    const aiMatches = aiContent.toLowerCase().includes(keyword);
+
+    // 如果用户内容匹配，显示用户内容（即使AI内容也匹配）
+    if (userMatches) {
+        return {
+            type: 'user',
+            content: userContent
+        };
+    }
+
+    // 如果只有AI内容匹配
+    if (aiMatches) {
+        return {
+            type: 'ai',
+            content: aiContent
+        };
+    }
+
+    // 如果都不匹配，默认显示用户内容
+    return {
+        type: 'user',
+        content: '⚠️[无匹配字段]⚠️' + userContent
+    };
+};
+
+const highlightKeyword = (text) => {
+    if (!text || !searchKeyword.value.trim()) {
+        return text;
+    }
+
+    const keyword = searchKeyword.value.trim();
+    const regex = new RegExp(`(${keyword})`, 'gi');
+
+    // 限制显示长度，避免过长的文本
+    let displayText = text;
+    if (text.length > 100) {
+        const keywordIndex = text.toLowerCase().indexOf(keyword.toLowerCase());
+        if (keywordIndex !== -1) {
+            const start = Math.max(0, keywordIndex - 30);
+            const end = Math.min(text.length, keywordIndex + keyword.length + 30);
+            displayText = (start > 0 ? '...' : '') + text.substring(start, end) + (end < text.length ? '...' : '');
+        } else {
+            displayText = text.substring(0, 100) + '...';
+        }
+    }
+
+    return displayText.replace(regex, '<mark>$1</mark>');
+};
+
+const jumpToMessage = async (result) => {
+    try {
+        // 关闭搜索Modal
+        showSearchModal.value = false;
+
+        // 如果当前不在对应的会话中，先切换到对应会话
+        if (activeConversationId.value !== result.sessionId) {
+            await switchConversation(result.sessionId);
+        }
+
+        // 清空搜索状态（但不关闭Modal，因为已经关闭了）
+        searchKeyword.value = '';
+        searchResults.value = [];
+        isSearching.value = false;
+        searchLoading.value = false;
+
+        if (searchTimeout) {
+            clearTimeout(searchTimeout);
+            searchTimeout = null;
+        }
+
+        // 等待DOM更新后滚动到对应消息
+        await nextTick();
+
+        // 查找对应的消息元素并滚动到该位置
+        const messageElements = document.querySelectorAll('.message');
+        for (let element of messageElements) {
+            const messageContent = element.querySelector('.message-content');
+            if (messageContent && (
+                messageContent.textContent.includes(result.userContent) ||
+                messageContent.textContent.includes(result.aiContent)
+            )) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // 高亮显示该消息
+                element.style.backgroundColor = 'orange';
+                element.style.border = '2px solid orange';
+                element.style.borderRadius = '8px';
+
+                // 3秒后移除高亮
+                setTimeout(() => {
+                    element.style.backgroundColor = '';
+                    element.style.border = '';
+                    element.style.borderRadius = '';
+                }, 3000);
+                break;
+            }
+        }
+
+        message.success('已跳转到相关消息');
+    } catch (error) {
+        message.error(`跳转失败: ${error.message}`);
     }
 };
 

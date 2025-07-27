@@ -77,6 +77,9 @@ export const messageApi = {
   
   // 删除会话消息
   deleteMessagesBySessionId: (sessionId) => del(`/message/pair/delete`, { id: sessionId }),
+  
+  // 全局搜索消息
+  globalQuery: (keyWord) => get(`/message/pair/globalQuery`, { keyWord }),
 };
 
 /**
