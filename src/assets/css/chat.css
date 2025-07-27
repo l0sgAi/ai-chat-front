@@ -242,7 +242,7 @@
 }
 
 .message.highlight .message-bubble {
-  background-color: #e8d100; /* 更亮的背景作为高亮 */
+  background-color: #bb9428; /* 更亮的背景作为高亮 */
   transition: background-color 0.5s ease;
 }
 

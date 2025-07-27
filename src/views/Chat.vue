@@ -1267,20 +1267,16 @@ const jumpToMessage = async (result) => {
         // 关闭搜索Modal
         showSearchModal.value = false;
 
-        // 保存当前搜索关键词用于高亮检查
-        const currentKeyword = searchKeyword.value.trim();
-
         // 如果当前不在对应的会话中，先切换到对应会话
         if (activeConversationId.value !== result.sessionId) {
             await switchConversation(result.sessionId);
         }
 
-        // 清空搜索状态（但不关闭Modal，因为已经关闭了）
+        // 清空搜索状态
         searchKeyword.value = '';
         searchResults.value = [];
         isSearching.value = false;
         searchLoading.value = false;
-
         if (searchTimeout) {
             clearTimeout(searchTimeout);
             searchTimeout = null;
@@ -1289,26 +1285,38 @@ const jumpToMessage = async (result) => {
         // 等待DOM更新后滚动到对应消息
         await nextTick();
 
-        // 确定目标消息的唯一ID
-        const matchedInfo = getMatchedContent(result);
-        const targetMessageId = `${matchedInfo.type}-${result.id}`;
+        // 查找对应的用户和AI消息元素
+        const userMessageId = `user-${result.id}`;
+        const aiMessageId = `ai-${result.id}`;
 
-        // 查找对应的消息元素并滚动到该位置
-        const targetElement = document.querySelector(`[data-message-id='${targetMessageId}']`);
+        const userElement = document.querySelector(`[data-message-id='${userMessageId}']`);
+        const aiElement = document.querySelector(`[data-message-id='${aiMessageId}']`);
 
-        if (targetElement) {
-            targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        let scrolled = false;
 
-            // 添加高亮效果
-            targetElement.classList.add('highlight');
-            setTimeout(() => {
-                targetElement.classList.remove('highlight');
-            }, 2000); // 2秒后移除高亮
+        const highlightElement = (element) => {
+            if (element) {
+                // 优先滚动到用户消息，如果用户消息不存在，则滚动到AI消息
+                if (!scrolled) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    scrolled = true;
+                }
+                element.classList.add('highlight');
+                setTimeout(() => {
+                    element.classList.remove('highlight');
+                }, 3000); // 3秒后移除高亮提示
+            }
+        };
+
+        // 高亮用户和AI消息
+        highlightElement(userElement);
+        highlightElement(aiElement);
+
+        if (scrolled) {
+            message.success('已跳转到相关消息');
         } else {
             message.error('未能在当前会话中找到该消息，可能已被删除或更新。');
         }
-
-        message.success('已跳转到相关消息');
     } catch (error) {
         message.error(`跳转失败: ${error.message}`);
     }
