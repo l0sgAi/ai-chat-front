@@ -1266,6 +1266,9 @@ const jumpToMessage = async (result) => {
         // 关闭搜索Modal
         showSearchModal.value = false;
 
+        // 保存当前搜索关键词用于高亮检查
+        const currentKeyword = searchKeyword.value.trim();
+
         // 如果当前不在对应的会话中，先切换到对应会话
         if (activeConversationId.value !== result.sessionId) {
             await switchConversation(result.sessionId);
@@ -1294,17 +1297,6 @@ const jumpToMessage = async (result) => {
                 messageContent.textContent.includes(result.aiContent)
             )) {
                 element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                // 高亮显示该消息
-                element.style.backgroundColor = 'orange';
-                element.style.border = '2px solid orange';
-                element.style.borderRadius = '8px';
-
-                // 3秒后移除高亮
-                setTimeout(() => {
-                    element.style.backgroundColor = '';
-                    element.style.border = '';
-                    element.style.borderRadius = '';
-                }, 3000);
                 break;
             }
         }
