@@ -51,6 +51,11 @@
   overflow: hidden !important;
 }
 
+.n-layout-footer{
+  background-color: transparent !important;
+  border: none !important;
+}
+
 .conversation-list {
   flex: auto;
   overflow-y: auto;
