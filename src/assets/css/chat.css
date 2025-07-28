@@ -225,7 +225,7 @@
 .bottom-spacer-static {
   background-color: #030303;
   color: #fff;
-  height: 300px;
+  height: 50dvh;
 }
 
 .message {
@@ -708,15 +708,14 @@
 }
 
 .remove-image-btn {
-  position: absolute;
-  top: 0;
-  right: 0;
+  position: relative;
+  top: -22dvh;
+  right: 3dvh;
   width: 16px !important;
   height: 16px !important;
   min-width: 16px !important;
-  background: rgba(0, 0, 0, 0.6) !important;
+  background: #333 !important;
   border: none !important;
-  backdrop-filter: blur(2px);
   transition: all 0.2s ease;
 }
 
@@ -988,7 +987,7 @@
   min-width: 0;
   word-wrap: break-word;
   overflow-wrap: break-word;
-  hyphens: auto;
+  /* hyphens: auto; */
   line-height: 1.5;
   font-size: 16px;
   overflow: hidden;
