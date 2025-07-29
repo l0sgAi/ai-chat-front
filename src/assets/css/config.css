@@ -47,3 +47,30 @@
     font-family: 'Courier New', Courier, monospace;
     color: #999;
 }
+
+.config-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.config-header {
+    flex-shrink: 0;
+}
+
+.config-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.search-bar {
+    flex-shrink: 0;
+}
+
+.table-container {
+    flex-grow: 1;
+    overflow-y: auto; /* 让表格内容可以垂直滚动 */
+}

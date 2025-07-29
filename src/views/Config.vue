@@ -16,7 +16,7 @@
             </n-layout-header>
 
             <!-- 内容区域 -->
-            <n-layout-content class="config-content">
+            <div class="config-content">
                 <!-- 搜索栏 -->
                 <div class="search-bar">
                     <n-space>
@@ -40,9 +40,11 @@
                 </div>
 
                 <!-- 配置表格 -->
-                <n-data-table :columns="columns" :data="configs" :loading="loading" :pagination="pagination"
-                    :bordered="false" size="small" class="config-table" />
-            </n-layout-content>
+                <div class="table-container">
+                    <n-data-table :columns="columns" :data="configs" :loading="loading" :pagination="pagination"
+                        :bordered="false" size="small" class="config-table" />
+                </div>
+            </div>
 
             <!-- 新增/编辑配置模态框 -->
             <n-modal v-model:show="showAddModal" preset="dialog" title="配置信息" style="width: 800px;">
