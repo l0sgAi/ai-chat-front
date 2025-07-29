@@ -27,13 +27,8 @@
                     <!-- 搜索栏 -->
                     <div class="search-bar">
                         <n-space>
-                            <n-input
-                                v-model:value="searchKeyword"
-                                placeholder="搜索配置..."
-                                clearable
-                                @keyup.enter="loadConfigs"
-                                style="width: 300px;"
-                            >
+                            <n-input v-model:value="searchKeyword" placeholder="搜索配置..." clearable
+                                @keyup.enter="loadConfigs" style="width: 300px;">
                                 <template #prefix>
                                     <n-icon><search-outline /></n-icon>
                                 </template>
@@ -45,15 +40,8 @@
                     </div>
 
                     <!-- 配置表格 -->
-                    <n-data-table
-                        :columns="columns"
-                        :data="configs"
-                        :loading="loading"
-                        :pagination="pagination"
-                        :bordered="false"
-                        size="medium"
-                        class="config-table"
-                    />
+                    <n-data-table :columns="columns" :data="configs" :loading="loading" :pagination="pagination"
+                        :bordered="false" size="medium" class="config-table" />
                 </n-layout-content>
             </n-layout>
 
@@ -62,14 +50,8 @@
                 <template #header>
                     <span>{{ editingConfig ? '编辑配置' : '新增配置' }}</span>
                 </template>
-                <n-form
-                    ref="formRef"
-                    :model="formData"
-                    :rules="formRules"
-                    label-placement="left"
-                    label-width="120px"
-                    require-mark-placement="right-hanging"
-                >
+                <n-form ref="formRef" :model="formData" :rules="formRules" label-placement="left" label-width="120px"
+                    require-mark-placement="right-hanging">
                     <div class="form-grid">
                         <n-form-item label="显示名称" path="displayName">
                             <n-input v-model:value="formData.displayName" placeholder="请输入显示名称" />
@@ -81,92 +63,59 @@
                             <n-input v-model:value="formData.apiDomain" placeholder="请输入API域名" />
                         </n-form-item>
                         <n-form-item label="模型类型" path="modelType">
-                            <n-select
-                                v-model:value="formData.modelType"
-                                :options="modelTypeOptions"
-                                placeholder="请选择模型类型"
-                            />
+                            <n-select v-model:value="formData.modelType" :options="modelTypeOptions"
+                                placeholder="请选择模型类型" />
                         </n-form-item>
                         <n-form-item label="模型ID" path="modelId">
                             <n-input v-model:value="formData.modelId" placeholder="请输入模型ID" />
                         </n-form-item>
                         <n-form-item label="API密钥" path="apiKey" class="full-width">
-                            <n-input
-                                v-model:value="formData.apiKey"
-                                type="password"
-                                placeholder="请输入API密钥"
-                                show-password-on="click"
-                            />
+                            <n-input v-model:value="formData.apiKey" type="password" placeholder="请输入API密钥"
+                                show-password-on="click" />
                         </n-form-item>
                     </div>
-                    
+
                     <div class="parameter-group">
                         <div class="parameter-group-title">模型参数配置</div>
                         <div class="form-grid">
                             <n-form-item label="最大上下文消息数" path="maxContextMsgs">
-                                <n-input-number
-                                    v-model:value="formData.maxContextMsgs"
-                                    placeholder="请输入最大上下文消息数"
-                                    :min="1"
-                                />
+                                <n-input-number v-model:value="formData.maxContextMsgs" placeholder="请输入最大上下文消息数"
+                                    :min="1" />
                             </n-form-item>
                             <n-form-item label="相似度TopP" path="similarityTopP">
-                                <n-input-number
-                                    v-model:value="formData.similarityTopP"
-                                    placeholder="请输入TopP值(0-1之间)"
-                                    :step="0.01"
-                                />
+                                <n-input-number v-model:value="formData.similarityTopP" placeholder="请输入TopP值(0-1之间)"
+                                    :step="0.01" />
                             </n-form-item>
                             <n-form-item label="随机度Temperature" path="temperature">
-                                <n-input-number
-                                    v-model:value="formData.temperature"
-                                    placeholder="请输入Temperature值"
-                                    :step="0.01"
-                                />
+                                <n-input-number v-model:value="formData.temperature" placeholder="请输入Temperature值"
+                                    :step="0.01" />
                             </n-form-item>
                             <n-form-item label="相似度TopK" path="similarityTopK">
-                                <n-input-number
-                                    v-model:value="formData.similarityTopK"
-                                    placeholder="请输入TopK值"
-                                    :min="1"
-                                />
+                                <n-input-number v-model:value="formData.similarityTopK" placeholder="请输入TopK值"
+                                    :min="1" />
                             </n-form-item>
                         </div>
                     </div>
-                    
+
                     <div class="form-grid">
                         <n-form-item label="是否为默认模型" path="isDefault">
-                            <n-select
-                                v-model:value="formData.isDefault"
-                                :options="defaultOptions"
-                                placeholder="请选择是否为默认"
-                            />
+                            <n-select v-model:value="formData.isDefault" :options="defaultOptions"
+                                placeholder="请选择是否为默认" />
                         </n-form-item>
                         <n-form-item label="是否启用" path="isEnabled">
-                            <n-select
-                                v-model:value="formData.isEnabled"
-                                :options="enabledOptions"
-                                placeholder="请选择是否启用"
-                            />
+                            <n-select v-model:value="formData.isEnabled" :options="enabledOptions"
+                                placeholder="请选择是否启用" />
                         </n-form-item>
                         <n-form-item label="标签" path="caseTags" class="full-width">
                             <n-input v-model:value="formData.caseTags" placeholder="请输入标签，多个标签用逗号分隔" />
                         </n-form-item>
                         <n-form-item label="简介" path="caseBrief" class="full-width">
-                            <n-input
-                                v-model:value="formData.caseBrief"
-                                type="textarea"
-                                placeholder="请输入简介"
-                                :autosize="{ minRows: 2, maxRows: 4 }"
-                            />
+                            <n-input v-model:value="formData.caseBrief" type="textarea" placeholder="请输入简介"
+                                :autosize="{ minRows: 2, maxRows: 4 }" />
                         </n-form-item>
                         <n-form-item label="备注" path="caseRemark" class="full-width">
-                            <n-input
-                                v-model:value="formData.caseRemark"
-                                type="textarea"
-                                placeholder="请输入备注"
-                                :autosize="{ minRows: 2, maxRows: 4 }"
-                            />
+                            <n-input v-model:value="formData.caseRemark" type="textarea" placeholder="请输入备注"
+                                :autosize="{ minRows: 2, maxRows: 4 }" />
                         </n-form-item>
                     </div>
                 </n-form>
@@ -547,7 +496,7 @@ const loadConfigs = async () => {
             pageNum: pagination.value.page,
             pageSize: pagination.value.pageSize
         };
-        
+
         const response = await configApi.queryConfigs(params);
         if (response.code === 200) {
             configs.value = response.data || [];
@@ -619,7 +568,7 @@ const handleSubmit = async () => {
     try {
         await formRef.value?.validate();
         submitting.value = true;
-        
+
         let response;
         if (editingConfig.value) {
             // 更新配置
@@ -628,7 +577,7 @@ const handleSubmit = async () => {
             // 新增配置
             response = await configApi.addConfig(formData.value);
         }
-        
+
         if (response.code === 200) {
             message.success(editingConfig.value ? '更新成功' : '创建成功');
             showAddModal.value = false;

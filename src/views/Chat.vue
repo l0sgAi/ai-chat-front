@@ -82,13 +82,13 @@
                             'AI聊天'}}
                     </div>
                     <n-space align="center">
-                        <n-button @click="goToConfig" type="primary" secondary v-if="isAdmin">
+                        <n-button @click="goToConfig" class="header-btn-config" type="primary" secondary v-if="isAdmin">
                             <template #icon>
                                 <n-icon><settings-outline /></n-icon>
                             </template>
                             设置
                         </n-button>
-                        <n-button @click="logout" type="error" secondary>
+                        <n-button @click="logout" class="header-btn-out" type="error" secondary>
                             <template #icon>
                                 <n-icon><log-out-outline /></n-icon>
                             </template>
@@ -204,10 +204,8 @@
     </n-config-provider>
 
     <!-- Naive UI 图片预览 Modal -->
-    <n-modal v-model:show="showImageModal" preset="card" class="image-preview-modal" title="">
-        <!-- title 置空，也可以写"图片预览" -->
-        <template #header></template> <!-- 隐藏默认头部，让图片更大 -->
-        <img :src="previewImageUrl" style="width: 100%; height: auto; display: block;" />
+    <n-modal v-model:show="showImageModal" :bordered="false">
+        <img :src="previewImageUrl" style="max-width: 80dvw; max-height: 80dvh; display: block;" />
     </n-modal>
 
     <!-- 全局搜索 Modal -->
