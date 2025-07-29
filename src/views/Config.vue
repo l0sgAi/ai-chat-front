@@ -1,49 +1,48 @@
 <template>
     <n-config-provider :theme="darkTheme">
         <div class="config-container dark-theme">
-            <n-layout>
-                <!-- 头部 -->
-                <n-layout-header bordered class="config-header">
-                    <div class="header-content">
-                        <n-space align="center">
-                            <n-button quaternary circle @click="goBack">
-                                <template #icon>
-                                    <n-icon><arrow-back-outline /></n-icon>
-                                </template>
-                            </n-button>
-                            <h2>AI配置管理</h2>
-                        </n-space>
+            <!-- 头部 -->
+            <n-layout-header bordered class="config-header">
+                <div class="header-content">
+                    <n-space align="center">
+                        <n-button quaternary circle @click="goBack">
+                            <template #icon>
+                                <n-icon><arrow-back-outline /></n-icon>
+                            </template>
+                        </n-button>
+                        <h2>AI配置管理</h2>
+                    </n-space>
+                </div>
+            </n-layout-header>
+
+            <!-- 内容区域 -->
+            <n-layout-content class="config-content">
+                <!-- 搜索栏 -->
+                <div class="search-bar">
+                    <n-space>
+                        <n-input v-model:value="searchKeyword" placeholder="搜索配置..." clearable
+                            @keyup.enter="loadConfigs" style="width: 300px;">
+                            <template #prefix>
+                                <n-icon><search-outline /></n-icon>
+                            </template>
+                        </n-input>
+                        <n-button type="primary" @click="loadConfigs">
+                            搜索
+                        </n-button>
+
                         <n-button type="primary" @click="handleAddConfig">
                             <template #icon>
                                 <n-icon><add-outline /></n-icon>
                             </template>
                             新增配置
                         </n-button>
-                    </div>
-                </n-layout-header>
+                    </n-space>
+                </div>
 
-                <!-- 内容区域 -->
-                <n-layout-content class="config-content">
-                    <!-- 搜索栏 -->
-                    <div class="search-bar">
-                        <n-space>
-                            <n-input v-model:value="searchKeyword" placeholder="搜索配置..." clearable
-                                @keyup.enter="loadConfigs" style="width: 300px;">
-                                <template #prefix>
-                                    <n-icon><search-outline /></n-icon>
-                                </template>
-                            </n-input>
-                            <n-button type="primary" @click="loadConfigs">
-                                搜索
-                            </n-button>
-                        </n-space>
-                    </div>
-
-                    <!-- 配置表格 -->
-                    <n-data-table :columns="columns" :data="configs" :loading="loading" :pagination="pagination"
-                        :bordered="false" size="medium" class="config-table" />
-                </n-layout-content>
-            </n-layout>
+                <!-- 配置表格 -->
+                <n-data-table :columns="columns" :data="configs" :loading="loading" :pagination="pagination"
+                    :bordered="false" size="small" class="config-table" />
+            </n-layout-content>
 
             <!-- 新增/编辑配置模态框 -->
             <n-modal v-model:show="showAddModal" preset="dialog" title="配置信息" style="width: 800px;">
@@ -319,12 +318,10 @@ const columns = [
     {
         title: 'ID',
         key: 'id',
-        width: 80
     },
     {
         title: '显示名称',
         key: 'displayName',
-        width: 150,
         ellipsis: {
             tooltip: true
         }
@@ -332,7 +329,6 @@ const columns = [
     {
         title: '模型名称',
         key: 'modelName',
-        width: 150,
         ellipsis: {
             tooltip: true
         }
@@ -349,7 +345,6 @@ const columns = [
     {
         title: '模型类型',
         key: 'modelType',
-        width: 120,
         render(row) {
             const typeInfo = getModelTypeTag(row.modelType);
             return h(
@@ -364,7 +359,6 @@ const columns = [
     {
         title: 'API域名',
         key: 'apiDomain',
-        width: 200,
         ellipsis: {
             tooltip: true
         }
@@ -372,7 +366,6 @@ const columns = [
     {
         title: 'API密钥',
         key: 'apiKey',
-        width: 180,
         render(row) {
             return h(
                 'div',
@@ -403,7 +396,6 @@ const columns = [
     {
         title: '是否默认',
         key: 'isDefault',
-        width: 100,
         render(row) {
             return h(
                 NTag,
@@ -418,7 +410,6 @@ const columns = [
     {
         title: '状态',
         key: 'isEnabled',
-        width: 100,
         render(row) {
             return h(
                 NTag,
@@ -433,7 +424,7 @@ const columns = [
     {
         title: '创建时间',
         key: 'createTime',
-        width: 180,
+        sorter: (row1, row2) => new Date(row1.createTime).getTime() - new Date(row2.createTime).getTime(),
         render(row) {
             return row.createTime ? new Date(row.createTime).toLocaleString() : '-';
         }
@@ -441,7 +432,6 @@ const columns = [
     {
         title: '操作',
         key: 'actions',
-        width: 150,
         render(row) {
             return h(NSpace, null, {
                 default: () => [
