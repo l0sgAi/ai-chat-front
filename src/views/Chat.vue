@@ -1234,7 +1234,7 @@ const getMatchedContent = (result) => {
     // 如果都不匹配，默认显示用户内容
     return {
         type: 'user',
-        content: '⚠️[非完全匹配]⚠️' + userContent
+        content: '......' + userContent
     };
 };
 
