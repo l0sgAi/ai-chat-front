@@ -42,7 +42,7 @@
                 <!-- 配置表格 -->
                 <div class="table-container">
                     <n-data-table :columns="columns" :data="configs" :loading="loading" :pagination="pagination"
-                        :bordered="false" size="small" class="config-table" />
+                        :bordered="false" size="small" class="config-table" remote />
                 </div>
             </div>
 
@@ -134,7 +134,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, h } from 'vue';
+import { ref, reactive, onMounted, h } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMessage, darkTheme } from 'naive-ui';
 import {
@@ -179,19 +179,20 @@ const submitting = ref(false);
 const formRef = ref(null);
 
 // 分页配置
-const pagination = ref({
+const pagination = reactive({
     page: 1,
     pageSize: 10,
     itemCount: 0,
     showSizePicker: true,
     pageSizes: [10, 20, 50],
+    prefix: (info) => `共 ${info.itemCount} 条`,
     onChange: (page) => {
-        pagination.value.page = page;
+        pagination.page = page;
         loadConfigs();
     },
     onUpdatePageSize: (pageSize) => {
-        pagination.value.pageSize = pageSize;
-        pagination.value.page = 1;
+        pagination.pageSize = pageSize;
+        pagination.page = 1;
         loadConfigs();
     }
 });
@@ -485,14 +486,15 @@ const loadConfigs = async () => {
         loading.value = true;
         const params = {
             keyWord: searchKeyword.value || undefined,
-            pageNum: pagination.value.page,
-            pageSize: pagination.value.pageSize
+            pageNum: pagination.page,
+            pageSize: pagination.pageSize
         };
 
         const response = await configApi.queryConfigs(params);
         if (response.code === 200) {
             configs.value = response.data || [];
-            pagination.value.itemCount = response.total || 0;
+            // 更新分页信息
+            pagination.itemCount = response.count || 0;
         } else {
             message.error(`加载配置失败: ${response.message}`);
         }

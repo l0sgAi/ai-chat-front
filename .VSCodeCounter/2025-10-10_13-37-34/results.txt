@@ -1,0 +1,68 @@
+Date : 2025-10-10 13:37:34
+Directory : d:\vscodePjs\ai-chat-front
+Total : 25 files,  5472 codes, 145 comments, 538 blanks, all 6155 lines
+
+Languages
++------------+------------+------------+------------+------------+------------+
+| language   | files      | code       | comment    | blank      | total      |
++------------+------------+------------+------------+------------+------------+
+| vue        |          6 |      2,238 |         27 |        237 |      2,502 |
+| JSON       |          3 |      1,711 |          0 |          2 |      1,713 |
+| CSS        |          5 |      1,219 |         43 |        209 |      1,471 |
+| JavaScript |          5 |        254 |         73 |         59 |        386 |
+| XML        |          4 |         21 |          2 |         17 |         40 |
+| Markdown   |          1 |         16 |          0 |         11 |         27 |
+| HTML       |          1 |         13 |          0 |          3 |         16 |
++------------+------------+------------+------------+------------+------------+
+
+Directories
++---------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                          | files      | code       | comment    | blank      | total      |
++---------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                             |         25 |      5,472 |        145 |        538 |      6,155 |
+| . (Files)                                                     |          5 |      1,753 |          2 |         18 |      1,773 |
+| .vercel                                                       |          1 |          1 |          0 |          0 |          1 |
+| public                                                        |          3 |         20 |          2 |         17 |         39 |
+| src                                                           |         16 |      3,698 |        141 |        503 |      4,342 |
+| src (Files)                                                   |          3 |        101 |          1 |         17 |        119 |
+| src\api                                                       |          1 |         54 |         43 |         27 |        124 |
+| src\assets                                                    |          5 |      1,154 |         43 |        199 |      1,396 |
+| src\assets (Files)                                            |          1 |          1 |          0 |          0 |          1 |
+| src\assets\css                                                |          4 |      1,153 |         43 |        199 |      1,395 |
+| src\components                                                |          1 |         37 |          0 |          7 |         44 |
+| src\router                                                    |          1 |         57 |          4 |          8 |         69 |
+| src\utils                                                     |          1 |        122 |         24 |         20 |        166 |
+| src\views                                                     |          4 |      2,173 |         26 |        225 |      2,424 |
++---------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++---------------------------------------------------------------+------------+------------+------------+------------+------------+
+| filename                                                      | language   | code       | comment    | blank      | total      |
++---------------------------------------------------------------+------------+------------+------------+------------+------------+
+| d:\vscodePjs\ai-chat-front\.vercel\project.json               | JSON       |          1 |          0 |          0 |          1 |
+| d:\vscodePjs\ai-chat-front\README.md                          | Markdown   |         16 |          0 |         11 |         27 |
+| d:\vscodePjs\ai-chat-front\index.html                         | HTML       |         13 |          0 |          3 |         16 |
+| d:\vscodePjs\ai-chat-front\package-lock.json                  | JSON       |      1,682 |          0 |          1 |      1,683 |
+| d:\vscodePjs\ai-chat-front\package.json                       | JSON       |         28 |          0 |          1 |         29 |
+| d:\vscodePjs\ai-chat-front\public\ai-platform-svgrepo-com.svg | XML        |         13 |          1 |         12 |         26 |
+| d:\vscodePjs\ai-chat-front\public\ai-solid.svg                | XML        |          6 |          1 |          5 |         12 |
+| d:\vscodePjs\ai-chat-front\public\vite.svg                    | XML        |          1 |          0 |          0 |          1 |
+| d:\vscodePjs\ai-chat-front\src\App.vue                        | vue        |         28 |          1 |          5 |         34 |
+| d:\vscodePjs\ai-chat-front\src\api\index.js                   | JavaScript |         54 |         43 |         27 |        124 |
+| d:\vscodePjs\ai-chat-front\src\assets\css\chat.css            | CSS        |        908 |         36 |        160 |      1,104 |
+| d:\vscodePjs\ai-chat-front\src\assets\css\config.css          | CSS        |         64 |          0 |         12 |         76 |
+| d:\vscodePjs\ai-chat-front\src\assets\css\login.css           | CSS        |         74 |          4 |         12 |         90 |
+| d:\vscodePjs\ai-chat-front\src\assets\css\register.css        | CSS        |        107 |          3 |         15 |        125 |
+| d:\vscodePjs\ai-chat-front\src\assets\vue.svg                 | XML        |          1 |          0 |          0 |          1 |
+| d:\vscodePjs\ai-chat-front\src\components\HelloWorld.vue      | vue        |         37 |          0 |          7 |         44 |
+| d:\vscodePjs\ai-chat-front\src\main.js                        | JavaScript |          7 |          0 |          2 |          9 |
+| d:\vscodePjs\ai-chat-front\src\router\index.js                | JavaScript |         57 |          4 |          8 |         69 |
+| d:\vscodePjs\ai-chat-front\src\style.css                      | CSS        |         66 |          0 |         10 |         76 |
+| d:\vscodePjs\ai-chat-front\src\utils\request.js               | JavaScript |        122 |         24 |         20 |        166 |
+| d:\vscodePjs\ai-chat-front\src\views\Chat.vue                 | vue        |      1,177 |         21 |        145 |      1,343 |
+| d:\vscodePjs\ai-chat-front\src\views\Config.vue               | vue        |        588 |          5 |         32 |        625 |
+| d:\vscodePjs\ai-chat-front\src\views\Login.vue                | vue        |        169 |          0 |         20 |        189 |
+| d:\vscodePjs\ai-chat-front\src\views\Register.vue             | vue        |        239 |          0 |         28 |        267 |
+| d:\vscodePjs\ai-chat-front\vite.config.js                     | JavaScript |         14 |          2 |          2 |         18 |
+| Total                                                         |            |      5,472 |        145 |        538 |      6,155 |
++---------------------------------------------------------------+------------+------------+------------+------------+------------+
