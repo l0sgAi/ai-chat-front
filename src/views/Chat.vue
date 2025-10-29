@@ -20,7 +20,7 @@
                 </div>
 
                 <!-- 会话列表 -->
-                <div class="conversation-list">
+                <div class="conversation-list" ref="conversationListRef">
                     <template v-if="loading">
                         <div class="loading-container">
                             <n-spin size="small" />
@@ -67,6 +67,15 @@
                                 </n-space>
                             </n-space>
                         </div>
+                        
+                        <!-- 加载更多提示 -->
+                        <div v-if="loadingMore" class="loading-more">
+                            <n-spin size="small" />
+                            <span style="margin-left: 8px; font-size: 12px; color: #999;">加载更多...</span>
+                        </div>
+                        <div v-else-if="!hasMore" class="no-more-data">
+                            <span style="font-size: 12px; color: #999;">没有更多会话了</span>
+                        </div>
                     </template>
                     <n-empty :show-icon="false" v-else description="暂无会话" />
                 </div>
@@ -100,6 +109,15 @@
                 <!-- 聊天消息区域 -->
                 <n-layout-content ref="chatContentRef" class="chat-messages" @click="handleImageClick">
                     <template v-if="messages.length > 0">
+                        <!-- 加载更多历史消息提示 -->
+                        <div v-if="loadingMessages" class="loading-more-messages">
+                            <n-spin size="small" />
+                            <span style="margin-left: 8px; font-size: 12px; color: #999;">加载更早的消息...</span>
+                        </div>
+                        <div v-else-if="!hasMoreMessages && messages.length >= 5" class="no-more-messages">
+                            <span style="font-size: 12px; color: #666;">没有更多历史消息了</span>
+                        </div>
+                        
                         <div v-for="msg in messages" :key="msg.id"
                             :class="['message', msg.sender === username ? 'user-message' : 'ai-message']"
                             :data-message-id="msg.id">
@@ -294,7 +312,7 @@
 
 <script setup>
 import { userApi, chatApi, sessionApi, messageApi, configApi } from '../api';
-import { ref, onMounted, nextTick, watch, computed } from 'vue';
+import { ref, onMounted, onBeforeUnmount, nextTick, watch, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMessage, useDialog, darkTheme } from 'naive-ui';
 import { h } from 'vue';
@@ -359,9 +377,18 @@ const username = ref('用户');
 const activeConversationId = ref(null);
 const isAdmin = ref(false);
 
+// 消息分页相关状态
+const loadingMessages = ref(false); // 加载历史消息状态
+const hasMoreMessages = ref(true); // 是否还有更多历史消息
+const oldestMessageId = ref(null); // 游标：最早的消息ID
+const isSwitchingConversation = ref(false); // 是否正在切换会话（防止意外触发分页）
+
 // 会话列表数据
 const conversations = ref([]);
 const loading = ref(false);
+const loadingMore = ref(false); // 加载更多状态
+const hasMore = ref(true); // 是否还有更多数据
+const lastMessageTime = ref(null); // 游标：最后一条数据的时间
 
 // 模型选择相关
 const selectedModelId = ref(null);
@@ -391,11 +418,28 @@ const showSearchModal = ref(false);
 let searchTimeout = null;
 
 const chatContentRef = ref(null);
+const conversationListRef = ref(null); // 会话列表容器引用
 
 // 计算属性：判断当前选择的模型是否为视觉模型
 const isVisionModel = computed(() => {
     return selectedModelData.value && selectedModelData.value.modelType === 2;
 });
+
+// 将 Date 对象或时间字符串转换为数据库格式 YYYY-MM-DD HH:mm:ss
+const formatToDBTime = (date) => {
+    if (!date) return null;
+    
+    const d = typeof date === 'string' ? new Date(date) : date;
+    
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const seconds = String(d.getSeconds()).padStart(2, '0');
+    
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};
 
 // 截断标题到最长11个字符
 const truncateTitle = (title) => {
@@ -409,23 +453,38 @@ const truncateSummary = (summary) => {
     return summary.length > 20 ? summary.substring(0, 20) + '...' : summary;
 };
 
-// 加载会话列表
+// 加载初始会话列表
 const loadConversations = async () => {
     try {
         loading.value = true;
-        const response = await sessionApi.selectSessions();
+        const response = await sessionApi.initialList();
         if (response.code === 200) {
-            conversations.value = response.data.map(session => ({
-                id: session.id,
-                title: truncateTitle(session.title),
-                lastMessage: truncateSummary(session.summary),
-                time: new Date(session.lastMessageTime || session.createdTime),
-                messages: [],
-                originalTitle: session.title, // 保存原始标题用于显示完整信息
-                originalSummary: session.summary, // 保存原始摘要
-                isFavorite: session.isFavorite,
-                tags: session.tags
-            }));
+            const sessionList = response.data.map(session => {
+                const timeStr = session.lastMessageTime || session.createdTime;
+                return {
+                    id: session.id,
+                    title: truncateTitle(session.title),
+                    lastMessage: truncateSummary(session.summary),
+                    time: new Date(timeStr),
+                    messages: [],
+                    originalTitle: session.title, // 保存原始标题用于显示完整信息
+                    originalSummary: session.summary, // 保存原始摘要
+                    isFavorite: session.isFavorite,
+                    tags: session.tags,
+                    // 确保保存的是数据库格式的字符串，如果后端返回的是ISO格式则转换
+                    lastMessageTime: timeStr.includes('T') ? formatToDBTime(timeStr) : timeStr
+                };
+            });
+            conversations.value = sessionList;
+            
+            // 更新游标：获取最后一条数据的 lastMessageTime
+            if (sessionList.length > 0) {
+                const lastSession = sessionList[sessionList.length - 1];
+                lastMessageTime.value = lastSession.lastMessageTime;
+            }
+            
+            // 如果返回的数据少于12条，说明没有更多数据了
+            hasMore.value = sessionList.length >= 12;
         } else {
             message.error(`加载会话失败: ${response.message}`);
         }
@@ -433,6 +492,54 @@ const loadConversations = async () => {
         message.error(`加载会话失败: ${error.message}`);
     } finally {
         loading.value = false;
+    }
+};
+
+// 加载更多会话（游标分页）
+const loadMoreConversations = async () => {
+    if (loadingMore.value || !hasMore.value || !lastMessageTime.value) {
+        return;
+    }
+    
+    try {
+        loadingMore.value = true;
+        const response = await sessionApi.pageList(lastMessageTime.value, 12);
+        if (response.code === 200) {
+            const newSessions = response.data.map(session => {
+                const timeStr = session.lastMessageTime || session.createdTime;
+                return {
+                    id: session.id,
+                    title: truncateTitle(session.title),
+                    lastMessage: truncateSummary(session.summary),
+                    time: new Date(timeStr),
+                    messages: [],
+                    originalTitle: session.title,
+                    originalSummary: session.summary,
+                    isFavorite: session.isFavorite,
+                    tags: session.tags,
+                    // 确保保存的是数据库格式的字符串，如果后端返回的是ISO格式则转换
+                    lastMessageTime: timeStr.includes('T') ? formatToDBTime(timeStr) : timeStr
+                };
+            });
+            
+            // 追加新数据到列表
+            conversations.value = [...conversations.value, ...newSessions];
+            
+            // 更新游标
+            if (newSessions.length > 0) {
+                const lastSession = newSessions[newSessions.length - 1];
+                lastMessageTime.value = lastSession.lastMessageTime;
+            }
+            
+            // 如果返回的数据少于12条，说明没有更多数据了
+            hasMore.value = newSessions.length >= 12;
+        } else {
+            message.error(`加载更多会话失败: ${response.message}`);
+        }
+    } catch (error) {
+        message.error(`加载更多会话失败: ${error.message}`);
+    } finally {
+        loadingMore.value = false;
     }
 };
 
@@ -479,7 +586,7 @@ const loadModels = async () => {
 };
 
 // 自动滚动到底部
-const scrollToBottom = async () => {
+const scrollToBottom = async (instant = false) => {
     await nextTick(); // 等待DOM更新完成
     const layoutInst = chatContentRef.value;
     if (layoutInst) {
@@ -494,7 +601,7 @@ const scrollToBottom = async () => {
             if (actualScrollContainer) {
                 actualScrollContainer.scrollTo({
                     top: actualScrollContainer.scrollHeight,
-                    behavior: 'smooth'
+                    behavior: instant ? 'auto' : 'smooth' // instant为true时直接跳转，不触发滚动事件
                 });
             }
         }
@@ -503,8 +610,41 @@ const scrollToBottom = async () => {
 
 // 监听消息变化，自动滚动到底部
 watch(messages, () => {
-    scrollToBottom();
+    // 如果正在切换会话，不自动滚动（由switchConversation手动控制）
+    // 如果正在加载历史消息，不自动滚动（由loadMoreMessages手动控制滚动位置）
+    if (!isSwitchingConversation.value && !loadingMessages.value) {
+        scrollToBottom();
+    }
 }, { deep: true });
+
+// 会话列表滚动监听（向下滚动加载更多会话）
+const handleConversationScroll = (event) => {
+    const container = event.target;
+    const scrollTop = container.scrollTop;
+    const scrollHeight = container.scrollHeight;
+    const clientHeight = container.clientHeight;
+    
+    // 当滚动到底部附近（距离底部50px以内）时加载更多
+    if (scrollHeight - scrollTop - clientHeight < 50) {
+        loadMoreConversations();
+    }
+};
+
+// 消息区域滚动监听（向上滚动加载更早的消息）
+const handleMessageScroll = (event) => {
+    // 如果正在切换会话，不触发分页加载
+    if (isSwitchingConversation.value) {
+        return;
+    }
+    
+    const container = event.target;
+    const scrollTop = container.scrollTop;
+    
+    // 当滚动到顶部附近（距离顶部50px以内）时加载更早的消息
+    if (scrollTop < 50) {
+        loadMoreMessages();
+    }
+};
 
 // 组件挂载时加载会话列表
 onMounted(async () => {
@@ -522,10 +662,81 @@ onMounted(async () => {
     } catch (error) {
         console.error('获取用户信息失败:', error);
     }
+    
+    // 添加滚动监听
+    await nextTick();
+    // 会话列表滚动监听
+    if (conversationListRef.value) {
+        conversationListRef.value.addEventListener('scroll', handleConversationScroll);
+    }
+    
+    // 消息区域滚动监听
+    const chatContent = chatContentRef.value?.$el;
+    if (chatContent) {
+        const scrollContainer = chatContent.querySelector('.n-scrollbar-container') || 
+                              chatContent.querySelector('.n-layout-scroll-container') ||
+                              chatContent.firstElementChild;
+        if (scrollContainer) {
+            scrollContainer.addEventListener('scroll', handleMessageScroll);
+        }
+    }
 });
 
-// 切换会话
+// 组件卸载时清理事件监听器
+onBeforeUnmount(() => {
+    // 清理会话列表滚动监听
+    if (conversationListRef.value) {
+        conversationListRef.value.removeEventListener('scroll', handleConversationScroll);
+    }
+    
+    // 清理消息区域滚动监听
+    const chatContent = chatContentRef.value?.$el;
+    if (chatContent) {
+        const scrollContainer = chatContent.querySelector('.n-scrollbar-container') || 
+                              chatContent.querySelector('.n-layout-scroll-container') ||
+                              chatContent.firstElementChild;
+        if (scrollContainer) {
+            scrollContainer.removeEventListener('scroll', handleMessageScroll);
+        }
+    }
+});
+
+// 将消息对转换为前端消息格式的辅助函数
+const convertMessagePairToMessages = (msgPair) => {
+    const pairMessages = [];
+
+    // 添加用户消息
+    if (msgPair.userContent) {
+        pairMessages.push({
+            id: `user-${msgPair.id}`,
+            sender: username.value,
+            content: msgPair.userContent,
+            time: new Date(msgPair.createTime).toLocaleTimeString(),
+            createTime: msgPair.createTime,
+            pairId: msgPair.id // 保存消息对ID
+        });
+    }
+
+    // 添加AI回复消息
+    if (msgPair.aiContent) {
+        pairMessages.push({
+            id: `ai-${msgPair.id}`,
+            sender: 'AI助手',
+            content: msgPair.aiContent,
+            time: msgPair.responseTime ? new Date(msgPair.responseTime).toLocaleTimeString() : new Date(msgPair.createTime).toLocaleTimeString(),
+            createTime: msgPair.responseTime || msgPair.createTime,
+            pairId: msgPair.id // 保存消息对ID
+        });
+    }
+
+    return pairMessages;
+};
+
+// 切换会话（初始只加载最后5条）
 const switchConversation = async (convId) => {
+    // 设置切换会话标志，防止滚动时意外触发分页加载
+    isSwitchingConversation.value = true;
+    
     // 保存当前会话的消息
     const currentConv = conversations.value.find(conv => conv.id === activeConversationId.value);
     if (currentConv) {
@@ -534,64 +745,134 @@ const switchConversation = async (convId) => {
 
     // 切换到新会话
     activeConversationId.value = convId;
+    
+    // 重置消息分页状态
+    hasMoreMessages.value = true;
+    oldestMessageId.value = null;
+    messages.value = [];
 
-    // 从数据库加载会话的历史消息
+    // 从数据库加载会话的初始消息（最后5条）
     try {
-        // console.log('正在加载会话历史消息，会话ID:', convId);
-        const response = await messageApi.getMessagesBySessionId(convId);
-        // console.log('历史消息API响应:', response);
+        const response = await messageApi.getInitialMessages(convId);
 
         if (response.code === 200) {
-            // console.log('历史消息数据:', response.data);
-
             // 检查数据是否为空
             if (!response.data || response.data.length === 0) {
                 console.log('该会话暂无历史消息');
                 messages.value = [];
+                hasMoreMessages.value = false;
+                // 重置切换标志
+                isSwitchingConversation.value = false;
                 return;
             }
 
-            // 先按创建时间排序消息对
-            const sortedData = response.data.sort((a, b) => new Date(a.createTime) - new Date(b.createTime));
+            // 后端返回的是按id倒序的数据（最新的在前面）
+            // 需要反转顺序，使其正向显示（最旧的在前面）
+            const reversedData = [...response.data].reverse();
 
             // 将数据库中的消息转换为前端消息格式
-            const historyMessages = sortedData.map(msgPair => {
-                const pairMessages = [];
+            const historyMessages = reversedData.map(msgPair => 
+                convertMessagePairToMessages(msgPair)
+            ).flat();
 
-                // 添加用户消息
-                if (msgPair.userContent) {
-                    pairMessages.push({
-                        id: `user-${msgPair.id}`, // 使用可预测的唯一ID
-                        sender: username.value,
-                        content: msgPair.userContent,
-                        time: new Date(msgPair.createTime).toLocaleTimeString(),
-                        createTime: msgPair.createTime
-                    });
-                }
-
-                // 添加AI回复消息
-                if (msgPair.aiContent) {
-                    pairMessages.push({
-                        id: `ai-${msgPair.id}`, // 使用可预测的唯一ID
-                        sender: 'AI助手',
-                        content: msgPair.aiContent,
-                        time: msgPair.responseTime ? new Date(msgPair.responseTime).toLocaleTimeString() : new Date(msgPair.createTime).toLocaleTimeString(),
-                        createTime: msgPair.responseTime || msgPair.createTime
-                    });
-                }
-
-                return pairMessages;
-            }).flat();
-
-            // console.log('转换后的历史消息:', historyMessages);
             messages.value = historyMessages;
+            
+            // 设置游标：最早的消息ID（第一条数据的id）
+            if (reversedData.length > 0) {
+                oldestMessageId.value = reversedData[0].id;
+            }
+            
+            // 如果返回的数据少于5条，说明没有更多历史消息了
+            hasMoreMessages.value = response.data.length >= 5;
+            
+            // 直接跳转到底部（不使用平滑滚动，避免触发滚动事件）
+            await nextTick();
+            scrollToBottom(true); // 使用instant模式
+            
+            // 等待一小段时间后重置切换标志，确保滚动已完成
+            setTimeout(() => {
+                isSwitchingConversation.value = false;
+            }, 100);
         } else {
             console.error('加载历史消息失败:', response.message);
             messages.value = [];
+            hasMoreMessages.value = false;
+            // 重置切换标志
+            isSwitchingConversation.value = false;
         }
     } catch (error) {
         console.error('加载历史消息失败:', error);
         messages.value = [];
+        hasMoreMessages.value = false;
+        // 重置切换标志
+        isSwitchingConversation.value = false;
+    }
+};
+
+// 加载更多历史消息（向上滚动时触发）
+const loadMoreMessages = async () => {
+    if (loadingMessages.value || !hasMoreMessages.value || !oldestMessageId.value || !activeConversationId.value) {
+        return;
+    }
+    
+    try {
+        loadingMessages.value = true;
+        
+        const response = await messageApi.getMessagesByPage(activeConversationId.value, oldestMessageId.value, 5);
+        
+        if (response.code === 200) {
+            if (!response.data || response.data.length === 0) {
+                hasMoreMessages.value = false;
+                loadingMessages.value = false;
+                return;
+            }
+            
+            // 保存当前滚动位置
+            const chatContent = chatContentRef.value?.$el;
+            const scrollContainer = chatContent?.querySelector('.n-scrollbar-container') || 
+                                  chatContent?.querySelector('.n-layout-scroll-container') ||
+                                  chatContent?.firstElementChild;
+            const oldScrollHeight = scrollContainer?.scrollHeight || 0;
+            
+            // 后端返回的是按id倒序的数据，反转后追加到前面
+            const reversedData = [...response.data].reverse();
+            
+            // 将新加载的消息转换为前端格式
+            const newMessages = reversedData.map(msgPair => 
+                convertMessagePairToMessages(msgPair)
+            ).flat();
+            
+            // 将新消息追加到列表开头
+            messages.value = [...newMessages, ...messages.value];
+            
+            // 更新游标
+            if (reversedData.length > 0) {
+                oldestMessageId.value = reversedData[0].id;
+            }
+            
+            // 如果返回的数据少于5条，说明没有更多历史消息了
+            hasMoreMessages.value = response.data.length >= 5;
+            
+            // 等待DOM更新完成
+            await nextTick();
+            
+            // 恢复滚动位置，避免页面跳动
+            if (scrollContainer) {
+                const newScrollHeight = scrollContainer.scrollHeight;
+                scrollContainer.scrollTop = newScrollHeight - oldScrollHeight;
+            }
+            
+            // 延迟重置加载状态，确保滚动位置设置完成后再允许 watch 触发
+            setTimeout(() => {
+                loadingMessages.value = false;
+            }, 50);
+        } else {
+            message.error(`加载历史消息失败: ${response.message}`);
+            loadingMessages.value = false;
+        }
+    } catch (error) {
+        message.error(`加载历史消息失败: ${error.message}`);
+        loadingMessages.value = false;
     }
 };
 
@@ -601,6 +882,11 @@ const prepareNewConversation = () => {
     activeConversationId.value = null;
     // 清空消息列表
     messages.value = [];
+    // 重置消息分页状态
+    hasMoreMessages.value = true;
+    oldestMessageId.value = null;
+    isSwitchingConversation.value = false; // 重置切换标志
+    // 不需要重置会话列表的分页状态，因为只是准备新会话，并未改变会话列表
 };
 
 // 创建新会话（实际创建）
@@ -618,21 +904,28 @@ const createNewConversation = async (firstQuestion = null) => {
         const response = await sessionApi.addSession(sessionData);
         if (response.code === 200) {
             const newId = response.data; // 后端返回插入的id
+            const now = new Date();
+            const dbTimeFormat = formatToDBTime(now); // 转换为数据库格式
             const newConversation = {
                 id: newId,
                 title: sessionData.title,
                 lastMessage: '',
-                time: new Date(),
+                time: now,
                 messages: [],
                 originalTitle: firstQuestion || sessionData.title,
                 originalSummary: '',
                 isFavorite: 0,
-                tags: ''
+                tags: '',
+                lastMessageTime: dbTimeFormat // 使用数据库格式的时间字符串
             };
 
+            // 将新会话插入到列表顶部
             conversations.value.unshift(newConversation);
             activeConversationId.value = newId;
             message.success('已创建新会话');
+            
+            // 注意：新会话插入顶部后，不影响游标分页，因为游标基于最后一条的lastMessageTime
+            
             return newId;
         } else {
             message.error(`创建会话失败: ${response.message}`);
@@ -663,15 +956,27 @@ const deleteConversation = async (convId) => {
         // 删除会话
         const response = await sessionApi.deleteSession(convId);
         if (response.code === 200) {
+            // 从列表中移除已删除的会话
             conversations.value = conversations.value.filter(conv => conv.id !== convId);
+            
+            // 如果删除的是当前活动会话
             if (activeConversationId.value === convId) {
                 if (conversations.value.length > 0) {
                     switchConversation(conversations.value[0].id);
                 } else {
                     activeConversationId.value = null;
                     messages.value = [];
+                    // 如果列表为空，重置分页状态
+                    lastMessageTime.value = null;
+                    hasMore.value = true;
                 }
             }
+            
+            // 如果列表为空，重新加载初始数据
+            if (conversations.value.length === 0) {
+                await loadConversations();
+            }
+            
             message.success('会话及相关消息已删除');
         } else {
             message.error(`删除会话失败: ${response.message}`);
@@ -779,6 +1084,9 @@ const sendMessage = async () => {
 
         // 立即清空输入框
         const messageContent = newMessage.value.trim();
+        // 去除段落标识
+        messageContent.replace('<p>','')
+        messageContent.replace('</p>','')
         newMessage.value = '';
 
         // 构造图片 HTML（如果使用视觉模型且有图片）

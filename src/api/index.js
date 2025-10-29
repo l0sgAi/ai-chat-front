@@ -61,6 +61,12 @@ export const sessionApi = {
   // 查询会话列表（支持关键字搜索）
   selectSessions: (keyword) => get(`/session/select`, keyword ? { keyword } : {}),
   
+  // 初始加载会话列表（前12条）
+  initialList: () => get(`/session/select/initial`),
+  
+  // 游标分页查询会话列表
+  pageList: (lastMessageTime, pageSize = 12) => get(`/session/select/page`, { lastMessageTime, pageSize }),
+  
   // 删除会话
   deleteSession: (id) => del(`/session/delete`, { id }),
 };
@@ -72,8 +78,14 @@ export const messageApi = {
   // 新增消息对话
   addMessage: (data) => post(`/message/pair/add`, data),
   
-  // 根据会话ID查询消息列表
+  // 根据会话ID查询消息列表（已废弃，使用分页接口）
   getMessagesBySessionId: (sessionId) => get(`/message/pair/select/${sessionId}`),
+  
+  // 初始加载消息列表（最后5条）
+  getInitialMessages: (sessionId) => get(`/message/pair/select/initial/${sessionId}`),
+  
+  // 游标分页查询消息列表
+  getMessagesByPage: (sessionId, lastId, pageSize = 5) => get(`/message/pair/page`, { sessionId, lastId, pageSize }),
   
   // 删除会话消息
   deleteMessagesBySessionId: (sessionId) => del(`/message/pair/delete`, { id: sessionId }),

@@ -91,6 +91,46 @@
   gap: 8px;
 }
 
+/* 加载更多提示样式 */
+.loading-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  color: #999;
+  gap: 8px;
+}
+
+/* 没有更多数据提示样式 */
+.no-more-data {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  color: #666;
+}
+
+/* 加载更多历史消息提示样式 */
+.loading-more-messages {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  color: #999;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+/* 没有更多历史消息提示样式 */
+.no-more-messages {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  color: #666;
+  margin-bottom: 16px;
+}
+
 .empty-conversations {
   margin-top: 15%;
   text-align: center;
