@@ -1,0 +1,86 @@
+/* ModelConfig 组件样式 - 使用 mc- 前缀 */
+
+.mc-model-config-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.mc-search-bar {
+    flex-shrink: 0;
+    margin-bottom: 16px;
+}
+
+.mc-table-container {
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+.mc-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+.mc-form-grid .mc-full-width {
+    grid-column: span 2;
+}
+
+.mc-parameter-group {
+    margin: 16px 0;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+}
+
+.mc-parameter-group-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #fff;
+}
+
+.mc-api-key-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mc-api-key-text {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+    font-size: 12px;
+}
+
+.mc-copy-button {
+    background-color: transparent;
+}
+
+.mc-model-type-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.mc-model-type-tag.mc-model-type-0 {
+    background-color: rgba(24, 160, 88, 0.1);
+    color: #18a058;
+}
+
+.mc-model-type-tag.mc-model-type-1 {
+    background-color: rgba(42, 148, 255, 0.1);
+    color: #2a94ff;
+}
+
+.mc-model-type-tag.mc-model-type-2 {
+    background-color: rgba(240, 138, 0, 0.1);
+    color: #f08a00;
+}
+

@@ -1,21 +1,16 @@
-#app {
-  max-width: none;
-  margin: 0;
-  padding: 0;
-  text-align: left;
-  height: 100vh; /* 使用视口高度 */
-  width: 100%;
-  overflow: hidden;
-  background-color: #000000;
-  color: #fff;
-}
-
+/* Chat页面容器样式 */
 .chat-container {
   display: flex;
   width: 100%;
-  height: 100%; /* 占满父容器高度 */
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  text-align: left;
   overflow: hidden;
-  justify-content: flex-start; /* 强制左对齐 */
+  background-color: #000000;
+  color: #fff;
+  justify-content: flex-start;
+  /* position: relative; */
 }
 
 /* 左侧会话列表 */
@@ -34,7 +29,7 @@
   z-index: 100;
 }
 
-.sidebar-header {
+.chat-sidebar-header {
   padding: 16px;
   color: #fff;
   border-bottom: 1px solid #333;
@@ -44,29 +39,34 @@
   align-items: center;
 }
 
-.sidebar-title {
+.chat-sidebar-title {
   font-size: 18px;
   font-weight: bold;
   color: #ffffff;
 }
 
-.n-layout-scroll-container{
+.chat-container .n-layout-scroll-container{
   margin-top: 1.7%;
   position: fixed;
   margin-left: 5%;
+  background-color: #030303;
   width: 88.5%;
 }
 
-.n-layout-content{
+.n-layout{
+  background-color: #030303 !important; 
+}
+
+.chat-container .n-layout-content{
   overflow: hidden !important;
 }
 
-.n-layout-sider-scroll-container {
+.chat-container .n-layout-sider-scroll-container {
   background-color: #000000;
   overflow: hidden !important;
 }
 
-.n-layout-footer{
+.chat-container .n-layout-footer{
   background-color: transparent !important;
   border: none !important;
 }
@@ -898,19 +898,19 @@
   max-height: 90dvh;
 }
 
-.n-card__content {
+.chat-container .n-card__content {
   background-color: transparent !important;
 }
 
-.n-card.n-modal{
+.chat-container .n-card.n-modal{
   border-radius: 8px;
 }
 
-.image-preview-modal {
+.chat-container .image-preview-modal {
   border-radius: 8px;
 }
 
-.image-preview-modal .n-card__content {
+.chat-container .image-preview-modal .n-card__content {
   padding: 0;
   display: flex;
   justify-content: center;

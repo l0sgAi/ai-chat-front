@@ -3,8 +3,8 @@
         <div class="chat-container">
             <!-- 左侧会话列表 -->
             <n-layout-sider bordered content-style="padding: 0;" class="chat-sidebar" style="height: 100dvh;">
-                <div class="sidebar-header">
-                    <span class="sidebar-title">会话列表</span>
+                <div class="chat-sidebar-header">
+                    <span class="chat-sidebar-title">会话列表</span>
                     <n-space :size="4">
                         <n-button quaternary circle @click="openSearchModal">
                             <template #icon>
@@ -95,7 +95,7 @@
                             <template #icon>
                                 <n-icon><settings-outline /></n-icon>
                             </template>
-                            设置
+                            后台管理
                         </n-button>
                         <n-button @click="logout" class="header-btn-out" type="error" secondary>
                             <template #icon>

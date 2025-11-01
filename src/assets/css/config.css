@@ -1,19 +1,19 @@
 .body { 
     width: 100%;
     height: 100dvh;
+    margin: 0;
+    padding: 0;
 }
 
 .header-content{
     padding: 12px;
 }
 
-.search-bar{
-    margin: 7px;
-}
-
 #app { 
     width: 100%;
     height: 100dvh;
+    margin: 0;
+    padding: 0;
 }
 
 .model-type-0 {
@@ -43,34 +43,4 @@
     font-size: 12px;
 }
 
-.dark-theme .api-key-text {
-    font-family: 'Courier New', Courier, monospace;
-    color: #999;
-}
-
-.config-container {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    overflow: hidden;
-}
-
-.config-header {
-    flex-shrink: 0;
-}
-
-.config-content {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.search-bar {
-    flex-shrink: 0;
-}
-
-.table-container {
-    flex-grow: 1;
-    overflow-y: auto; /* 让表格内容可以垂直滚动 */
-}
+/* 这些样式已迁移到组件独立的CSS文件中，此处保留仅用于兼容 */

@@ -125,6 +125,65 @@ export const configApi = {
   getModels: () => get(`/ai/config/getModels`),
 };
 
+/**
+ * RAG知识库相关API
+ */
+export const ragApi = {
+  // 新增RAG文档
+  addDocument: (data) => post(`/rag/add`, data),
+  
+  // 游标分页查询RAG文档列表
+  pageDocuments: (params) => get(`/rag/page`, params),
+  
+  // 查询RAG文档列表（旧接口，如果需要可以保留）
+  queryDocuments: (params) => get(`/rag/list`, params),
+  
+  // 更新RAG文档
+  updateDocument: (data) => put(`/rag/update`, data),
+  
+  // 删除RAG文档
+  deleteDocument: (id) => del(`/rag/delete?id=${id}`),
+  
+  // 批量删除RAG文档
+  batchDeleteDocuments: (ids) => del(`/rag/batchDelete`, { ids }),
+  
+  // 批量同步到向量数据库
+  batchSyncDocuments: (ids) => post(`/rag/batchSync`, { ids }),
+  
+  // 获取文档详情
+  getDocumentDetail: (id) => get(`/rag/detail/${id}`),
+  
+  // 获取所有向量索引列表
+  getIndexes: () => get(`/rag/getIndexes`),
+};
+
+/**
+ * 文件上传相关API
+ */
+export const fileApi = {
+  // 文件上传（用于多模态输入）
+  uploadFile: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return post(`/system/file/fileUpload`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  
+  // 文档内容解析（用于RAG知识库文档上传，返回解析后的RagStore对象）
+  parseDocument: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return post(`/system/file/fileParse`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+};
+
 // 导出所有API
 export default {
   userApi,
@@ -133,4 +192,6 @@ export default {
   messageApi,
   systemApi,
   configApi,
+  ragApi,
+  fileApi,
 };

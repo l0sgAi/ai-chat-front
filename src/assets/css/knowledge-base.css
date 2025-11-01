@@ -1,0 +1,60 @@
+/* KnowledgeBase 组件样式 - 使用 kb- 前缀 */
+
+.kb-knowledge-base-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.kb-action-bar {
+    flex-shrink: 0;
+    margin-bottom: 16px;
+}
+
+.kb-search-bar {
+    flex-shrink: 0;
+    margin-bottom: 16px;
+}
+
+/* 修复 n-select 和 n-date-picker 内部 SVG 图标偏移问题 */
+.kb-search-bar .n-base-selection svg{
+    position: relative;
+    top: -21px;
+    left: -17px;
+}
+
+.kb-table-container {
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+.kb-pre {
+    margin: 0;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+/* 加载更多按钮 */
+.kb-load-more {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px 0;
+    margin-top: 16px;
+}
+
+/* 没有更多数据提示 */
+.kb-no-more {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px 0;
+    margin-top: 16px;
+}
