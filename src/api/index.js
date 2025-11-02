@@ -142,10 +142,10 @@ export const ragApi = {
   updateDocument: (data) => put(`/rag/update`, data),
   
   // 删除RAG文档
-  deleteDocument: (id) => del(`/rag/delete?id=${id}`),
+  deleteDocument: (id) => del(`/rag/delete`, { id }),
   
   // 批量删除RAG文档
-  batchDeleteDocuments: (ids) => del(`/rag/batchDelete`, { ids }),
+  batchDeleteDocuments: (ids) => post(`/rag/deleteBatch`, ids),
   
   // 批量同步到向量数据库
   batchSyncDocuments: (ids) => post(`/rag/batchSync`, { ids }),
@@ -155,6 +155,9 @@ export const ragApi = {
   
   // 获取所有向量索引列表
   getIndexes: () => get(`/rag/getIndexes`),
+  
+  // 批量嵌入文档至向量数据库
+  embedding: (ids) => post(`/rag/embedding`, ids),
 };
 
 /**

@@ -29,9 +29,19 @@
     left: -17px;
 }
 
+.kb-search-input {
+    width: 300px;
+}
+
+.kb-search-input .n-input__suffix{
+    position: relative;
+    top: -7px;
+}
+
 .kb-table-container {
     flex-grow: 1;
     overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .kb-pre {

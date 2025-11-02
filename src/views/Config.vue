@@ -14,9 +14,7 @@
                 >
                     <div class="admin-sidebar-header">
                         <n-button quaternary circle @click="goBack" style="margin-bottom: 24px;">
-                            <template #icon>
-                                <n-icon><arrow-back-outline /></n-icon>
-                            </template>
+                            <n-icon><arrow-back-outline /></n-icon>
                         </n-button>
                         <h3 style="margin: 0 0 24px 0; padding: 0 12px; color: #fff;">后台管理</h3>
                     </div>
@@ -41,7 +39,7 @@
 </template>
 
 <script setup>
-import { ref, computed, h, onMounted, nextTick } from 'vue';
+import { ref, computed, h, onMounted, nextTick, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { darkTheme } from 'naive-ui';
 import '../assets/css/admin-config.css';
@@ -66,8 +64,8 @@ import KnowledgeBase from './admin/KnowledgeBase.vue';
 
 const router = useRouter();
 
-// 当前选中的菜单
-const activeMenu = ref('model-config');
+// 当前选中的菜单（从localStorage恢复上次选择的菜单，如果没有则默认为模型配置）
+const activeMenu = ref(localStorage.getItem('admin-active-menu') || 'model-config');
 
 // 菜单选项
 const menuOptions = [
@@ -99,6 +97,11 @@ const currentComponent = computed(() => {
 const goBack = () => {
     router.back();
 };
+
+// 监听菜单变化，保存到localStorage
+watch(activeMenu, (newValue) => {
+    localStorage.setItem('admin-active-menu', newValue);
+});
 
 // 组件挂载时确保样式正确应用
 onMounted(() => {

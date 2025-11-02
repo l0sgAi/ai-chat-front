@@ -25,7 +25,7 @@
                     v-model:value="queryParams.keyword"
                     placeholder="请输入标题或文档ID"
                     clearable
-                    style="width: 300px"
+                    class="kb-search-input"
                 >
                     <template #prefix>
                         <n-icon><search-outline /></n-icon>
@@ -824,9 +824,26 @@ const handleDelete = (row) => {
         content: `确定要删除文档 "${row.title}" 吗？此操作不可撤销。`,
         positiveText: '确认',
         negativeText: '取消',
-        onPositiveClick: () => {
-            message.success('删除成功（待对接后端接口）');
-            resetAndLoad();  // 重新加载数据
+        onPositiveClick: async () => {
+            try {
+                message.loading('正在删除...', { duration: 0, key: 'delete' });
+                
+                // 调用后端删除接口
+                const result = await ragApi.deleteDocument(row.id);
+                
+                message.destroyAll();
+                
+                if (result.code === 200) {
+                    message.success(result.data || '删除成功！');
+                    resetAndLoad();  // 重新加载数据
+                } else {
+                    message.error(result.message || '删除失败');
+                }
+            } catch (error) {
+                message.destroyAll();
+                console.error('删除失败:', error);
+                message.error('删除失败: ' + (error.message || '未知错误'));
+            }
         }
     });
 };
@@ -838,10 +855,27 @@ const handleBatchDelete = () => {
         content: `确定要删除选中的 ${checkedRowKeys.value.length} 个文档吗？此操作不可撤销。`,
         positiveText: '确认',
         negativeText: '取消',
-        onPositiveClick: () => {
-            message.success(`批量删除 ${checkedRowKeys.value.length} 个文档成功（待对接后端接口）`);
-            checkedRowKeys.value = [];
-            resetAndLoad();  // 重新加载数据
+        onPositiveClick: async () => {
+            try {
+                message.loading('正在批量删除...', { duration: 0, key: 'batchDelete' });
+                
+                // 调用后端批量删除接口
+                const result = await ragApi.batchDeleteDocuments(checkedRowKeys.value);
+                
+                message.destroyAll();
+                
+                if (result.code === 200) {
+                    message.success(result.data || `批量删除 ${checkedRowKeys.value.length} 个文档成功！`);
+                    checkedRowKeys.value = [];
+                    resetAndLoad();  // 重新加载数据
+                } else {
+                    message.error(result.message || '批量删除失败');
+                }
+            } catch (error) {
+                message.destroyAll();
+                console.error('批量删除失败:', error);
+                message.error('批量删除失败: ' + (error.message || '未知错误'));
+            }
         }
     });
 };
@@ -853,13 +887,27 @@ const handleBatchSync = () => {
         content: `确定要将选中的 ${checkedRowKeys.value.length} 个文档同步到向量数据库吗？`,
         positiveText: '确认',
         negativeText: '取消',
-        onPositiveClick: () => {
-            message.loading('正在同步到向量数据库...', { duration: 2000 });
-            setTimeout(() => {
-                message.success(`批量同步 ${checkedRowKeys.value.length} 个文档成功（待对接后端接口）`);
-                checkedRowKeys.value = [];
-                resetAndLoad();  // 重新加载数据
-            }, 2000);
+        onPositiveClick: async () => {
+            try {
+                message.loading('正在同步到向量数据库...', { duration: 0, key: 'embedding' });
+                
+                // 调用后端批量嵌入接口
+                const result = await ragApi.embedding(checkedRowKeys.value);
+                
+                message.destroyAll();
+                
+                if (result.code === 200) {
+                    message.success(result.data || `批量同步 ${checkedRowKeys.value.length} 个文档成功！`);
+                    checkedRowKeys.value = [];
+                    resetAndLoad();  // 重新加载数据
+                } else {
+                    message.error(result.message || '批量同步失败');
+                }
+            } catch (error) {
+                message.destroyAll();
+                console.error('批量同步失败:', error);
+                message.error('批量同步失败: ' + (error.message || '未知错误'));
+            }
         }
     });
 };
@@ -960,7 +1008,7 @@ const handleSave = async (isEmbedding) => {
                     fileSize: formData.fileSize,
                     language: formData.language,
                     status: 0, // 0-待处理
-                    deleted: 0,
+                    deleted: null,
                     isEmbedding: isEmbedding // true-保存并同步，false-暂存
                 };
                 
