@@ -1084,9 +1084,6 @@ const sendMessage = async () => {
 
         // 立即清空输入框
         const messageContent = newMessage.value.trim();
-        // 去除段落标识
-        messageContent.replace('<p>','')
-        messageContent.replace('</p>','')
         newMessage.value = '';
 
         // 构造图片 HTML（如果使用视觉模型且有图片）
@@ -1102,7 +1099,7 @@ const sendMessage = async () => {
             ).join('');
         }
         // 构造完整消息内容
-        const fullContent = imageHtml + (messageContent ? `<p>${messageContent}</p>` : '');
+        const fullContent = imageHtml + (messageContent ? `${messageContent}` : '');
 
         // 添加用户消息到当前会话
         const userMsg = {
