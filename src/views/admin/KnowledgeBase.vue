@@ -152,7 +152,7 @@
                     <n-auto-complete
                         v-model:value="formData.indexName"
                         :options="indexOptions"
-                        placeholder="请输入或选择索引名"
+                        placeholder="只能输入小写字母、数字和下划线,而且必须包含字符串vector才能被检索"
                         :loading="loadingIndexes"
                         clearable
                         @focus="handleIndexNameFocus"
