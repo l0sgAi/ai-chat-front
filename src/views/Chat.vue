@@ -123,9 +123,11 @@
                             :data-message-id="msg.id">
                             <div class="message-bubble">
                                 <div class="message-header">
-                                    <span class="sender">{{ msg.sender }}</span>
+                                    <div class="message-header-left">
+                                        <span class="sender">{{ msg.sender }}</span>
+                                        <span v-if="msg.modelId" class="model-name">{{ getModelName(msg.modelId) }}</span>
+                                    </div>
                                     <span class="time">{{ msg.time }}</span>
-
                                 </div>
                                 <div class="message-content markdown-body" v-html="formatMessageContent(msg.content)">
                                 </div>
@@ -269,6 +271,7 @@
                                     </template>
                                 </div>
                                 <div class="search-result-time">
+                                    <span v-if="result.modelUsed" class="search-model-name">{{ getModelName(result.modelUsed) }}</span>
                                     <n-time :time="new Date(result.createTime)" format="MM-dd HH:mm" />
                                 </div>
                             </div>
@@ -395,6 +398,7 @@ const selectedModelId = ref(null);
 const modelOptions = ref([]);
 const modelsLoading = ref(false);
 const selectedModelData = ref(null);
+const modelsData = ref([]); // 保存完整的模型数据列表
 
 // 图片上传相关
 const uploadedImages = ref([]);
@@ -424,6 +428,13 @@ const conversationListRef = ref(null); // 会话列表容器引用
 const isVisionModel = computed(() => {
     return selectedModelData.value && selectedModelData.value.modelType === 2;
 });
+
+// 根据模型ID获取模型显示名称
+const getModelName = (modelId) => {
+    if (!modelId) return '';
+    const model = modelsData.value.find(m => m.id === modelId);
+    return model ? model.displayName : `模型${modelId}`;
+};
 
 // 将 Date 对象或时间字符串转换为数据库格式 YYYY-MM-DD HH:mm:ss
 const formatToDBTime = (date) => {
@@ -549,26 +560,27 @@ const loadModels = async () => {
         modelsLoading.value = true;
         const response = await configApi.getModels();
         if (response.code === 200) {
-            const modelsData = response.data;
-            modelOptions.value = modelsData.map(model => ({
+            // 保存完整的模型数据列表
+            modelsData.value = response.data;
+            modelOptions.value = response.data.map(model => ({
                 label: model.displayName,
                 value: model.id
             }));
 
             // 设置默认选中的模型（isDefault为1的模型）
-            const defaultModel = modelsData.find(model => model.isDefault === 1);
+            const defaultModel = response.data.find(model => model.isDefault === 1);
             if (defaultModel) {
                 selectedModelId.value = defaultModel.id;
                 selectedModelData.value = defaultModel;
-            } else if (modelsData.length > 0) {
+            } else if (response.data.length > 0) {
                 // 如果没有默认模型，选择第一个
-                selectedModelId.value = modelsData[0].id;
-                selectedModelData.value = modelsData[0];
+                selectedModelId.value = response.data[0].id;
+                selectedModelData.value = response.data[0];
             }
 
             // 监听模型选择变化，更新模型数据
             watch(selectedModelId, (newModelId) => {
-                const selectedModel = modelsData.find(model => model.id === newModelId);
+                const selectedModel = response.data.find(model => model.id === newModelId);
                 selectedModelData.value = selectedModel || null;
                 // 当切换模型时，清空已上传的图片
                 if (uploadedImages.value.length > 0) {
@@ -713,7 +725,8 @@ const convertMessagePairToMessages = (msgPair) => {
             content: msgPair.userContent,
             time: new Date(msgPair.createTime).toLocaleTimeString(),
             createTime: msgPair.createTime,
-            pairId: msgPair.id // 保存消息对ID
+            pairId: msgPair.id, // 保存消息对ID
+            modelId: msgPair.modelUsed // 保存使用的模型ID
         });
     }
 
@@ -725,7 +738,8 @@ const convertMessagePairToMessages = (msgPair) => {
             content: msgPair.aiContent,
             time: msgPair.responseTime ? new Date(msgPair.responseTime).toLocaleTimeString() : new Date(msgPair.createTime).toLocaleTimeString(),
             createTime: msgPair.responseTime || msgPair.createTime,
-            pairId: msgPair.id // 保存消息对ID
+            pairId: msgPair.id, // 保存消息对ID
+            modelId: msgPair.modelUsed // 保存使用的模型ID
         });
     }
 
@@ -1106,7 +1120,8 @@ const sendMessage = async () => {
             id: `local-user-${Date.now()}`,
             sender: username.value,
             content: fullContent,
-            time: new Date().toLocaleTimeString()
+            time: new Date().toLocaleTimeString(),
+            modelId: selectedModelId.value // 保存使用的模型ID
         };
         messages.value.push(userMsg);
 
@@ -1175,7 +1190,8 @@ const sendMessage = async () => {
                 content: '',
                 time: new Date().toLocaleTimeString(),
                 isStreaming: true,
-                messagePairId: messagePairId // 关联消息对ID
+                messagePairId: messagePairId, // 关联消息对ID
+                modelId: selectedModelId.value // 保存使用的模型ID
             };
             messages.value.push(aiMsg);
 
