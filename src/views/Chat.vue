@@ -129,9 +129,14 @@
                                     </div>
                                     <span class="time">{{ msg.time }}</span>
                                 </div>
+                                <!-- 状态消息显示（在AI消息开始前显示） -->
+                                <div v-if="msg.isStreaming && !msg.content && statusMessage" class="status-message">
+                                    <n-spin size="small" :style="{ width: '16px', height: '16px' }" />
+                                    <span>{{ statusMessage }}</span>
+                                </div>
                                 <div class="message-content markdown-body" v-html="formatMessageContent(msg.content)">
                                 </div>
-                                <div v-if="msg.isStreaming && !msg.content" class="typing-indicator">
+                                <div v-if="msg.isStreaming && !msg.content && !statusMessage" class="typing-indicator">
                                     <span></span>
                                     <span></span>
                                     <span></span>
@@ -408,6 +413,8 @@ const isUploading = ref(false);
 const isGenerating = ref(false);
 const currentEventSource = ref(null);
 const currentStreamSessionId = ref(null);
+const currentStatusEventSource = ref(null); // 状态通知SSE连接
+const statusMessage = ref(''); // 当前状态消息
 
 // 图片预览相关
 const showImageModal = ref(false);
@@ -1183,6 +1190,11 @@ const sendMessage = async () => {
                 console.error('保存用户消息失败:', error);
             }
 
+            // 先设置生成状态和默认状态消息（在创建AI消息之前）
+            isGenerating.value = true;
+            currentStreamSessionId.value = streamSessionId;
+            statusMessage.value = '正在连接服务器...'; // 设置默认状态消息
+
             // 创建AI消息占位符
             const aiMsg = {
                 id: `local-ai-${Date.now()}`,
@@ -1195,12 +1207,44 @@ const sendMessage = async () => {
             };
             messages.value.push(aiMsg);
 
-            // 设置生成状态
-            isGenerating.value = true;
-            currentStreamSessionId.value = streamSessionId;
+            // 1. 先建立状态通知SSE连接（使用当前会话ID）
+            console.log('准备建立状态通知SSE连接...');
+            const statusEventSource = chatApi.createStatusSSEConnection(activeConversationId.value);
+            currentStatusEventSource.value = statusEventSource;
 
-            // 建立SSE连接获取流式响应
-            console.log('准备建立SSE连接...'); // 调试日志
+            // 状态通知SSE消息处理
+            statusEventSource.onmessage = (event) => {
+                try {
+                    const statusText = event.data;
+                    if (statusText && statusText.trim()) {
+                        console.log('接收到状态消息:', statusText);
+                        // 更新状态消息（会覆盖默认的"正在连接服务器..."）
+                        statusMessage.value = statusText.trim();
+                    }
+                } catch (error) {
+                    console.error('处理状态消息失败:', error);
+                }
+            };
+
+            statusEventSource.onerror = (error) => {
+                console.error('状态通知SSE连接错误:', error);
+                statusEventSource.close();
+                currentStatusEventSource.value = null;
+            };
+
+            statusEventSource.onopen = () => {
+                console.log('状态通知SSE连接已建立');
+            };
+
+            // 监听状态通知流结束事件
+            statusEventSource.addEventListener('close', () => {
+                console.log('状态通知SSE流已结束');
+                statusEventSource.close();
+                currentStatusEventSource.value = null;
+            });
+
+            // 2. 建立AI回答SSE连接（使用推流sessionId）
+            console.log('准备建立AI回答SSE连接...');
             const eventSource = chatApi.createSSEConnection(streamSessionId);
             currentEventSource.value = eventSource;
 
@@ -1210,6 +1254,10 @@ const sendMessage = async () => {
                     // 后端直接发送文本内容，不是JSON格式
                     const text = event.data;
                     if (text && text.trim()) {
+                        // 当开始接收到AI回答时，清空状态消息
+                        if (statusMessage.value) {
+                            statusMessage.value = '';
+                        }
                         // console.log('处理文本内容:', text); // 调试日志
                         // 确保aiMsg.content是字符串类型，然后累加内容
                         aiMsg.content = (aiMsg.content || '') + text;
@@ -1224,12 +1272,19 @@ const sendMessage = async () => {
             };
 
             eventSource.onerror = (error) => {
-                console.error('SSE连接错误:', error);
+                console.error('AI回答SSE连接错误:', error);
                 aiMsg.isStreaming = false;
                 isGenerating.value = false;
                 currentEventSource.value = null;
                 currentStreamSessionId.value = null;
+                statusMessage.value = ''; // 清空状态消息
                 eventSource.close();
+
+                // 同时关闭状态通知SSE
+                if (currentStatusEventSource.value) {
+                    currentStatusEventSource.value.close();
+                    currentStatusEventSource.value = null;
+                }
 
                 // 如果没有接收到任何内容，显示错误信息
                 if (!aiMsg.content) {
@@ -1245,12 +1300,19 @@ const sendMessage = async () => {
 
             // 监听流结束事件
             eventSource.addEventListener('close', () => {
-                console.log('SSE流已结束');
+                console.log('AI回答SSE流已结束');
                 aiMsg.isStreaming = false;
                 isGenerating.value = false;
                 currentEventSource.value = null;
                 currentStreamSessionId.value = null;
+                statusMessage.value = ''; // 清空状态消息
                 eventSource.close();
+
+                // 同时关闭状态通知SSE
+                if (currentStatusEventSource.value) {
+                    currentStatusEventSource.value.close();
+                    currentStatusEventSource.value = null;
+                }
 
                 // 更新会话列表中的最后消息
                 if (currentConv && aiMsg.content) {
@@ -1270,8 +1332,16 @@ const sendMessage = async () => {
                     isGenerating.value = false;
                     currentEventSource.value = null;
                     currentStreamSessionId.value = null;
+                    statusMessage.value = ''; // 清空状态消息
                     aiMsg.content = '连接超时，请检查网络或重试。';
                     eventSource.close();
+                    
+                    // 同时关闭状态通知SSE
+                    if (currentStatusEventSource.value) {
+                        currentStatusEventSource.value.close();
+                        currentStatusEventSource.value = null;
+                    }
+                    
                     message.warning('连接超时，请重试');
                 }
             }, 30000); // 30秒超时
@@ -1280,11 +1350,13 @@ const sendMessage = async () => {
             message.error(`发送失败: ${response.message}`);
             isGenerating.value = false;
             currentStreamSessionId.value = null;
+            statusMessage.value = ''; // 清空状态消息
         }
     } catch (error) {
         message.error(`发送失败: ${error.message}`);
         isGenerating.value = false;
         currentStreamSessionId.value = null;
+        statusMessage.value = ''; // 清空状态消息
     }
 
     // 清空输入框
@@ -1312,10 +1384,16 @@ const stopGeneration = async () => {
         message.error(`停止生成失败: ${error.message}`);
     }
 
-    // 关闭前端SSE连接
+    // 关闭前端AI回答SSE连接
     if (currentEventSource.value) {
         currentEventSource.value.close();
         currentEventSource.value = null;
+    }
+
+    // 关闭状态通知SSE连接
+    if (currentStatusEventSource.value) {
+        currentStatusEventSource.value.close();
+        currentStatusEventSource.value = null;
     }
 
     // 找到正在生成的AI消息并停止流式状态
@@ -1330,6 +1408,7 @@ const stopGeneration = async () => {
     // 重置状态
     isGenerating.value = false;
     currentStreamSessionId.value = null;
+    statusMessage.value = ''; // 清空状态消息
     message.info('已停止生成');
 };
 

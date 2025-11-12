@@ -49,6 +49,23 @@ export const chatApi = {
     console.log('SSE连接URL:', url); // 添加调试日志
     return new EventSource(url);
   },
+  
+  // 创建状态通知SSE连接（使用会话ID）
+  createStatusSSEConnection: (conversationId) => {
+    const baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
+    const tokenName = localStorage.getItem('tokenName');
+    const tokenValue = localStorage.getItem('tokenValue');
+    
+    let url = `${baseURL}/chat/stream/${conversationId}`;
+    
+    // 如果有token，添加到URL参数中
+    if (tokenName && tokenValue) {
+      url += `?${tokenName}=${encodeURIComponent(tokenValue)}`;
+    }
+    
+    console.log('状态通知SSE连接URL:', url);
+    return new EventSource(url);
+  },
 };
 
 /**
