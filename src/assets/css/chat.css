@@ -266,12 +266,13 @@
   height: 64px;
   position: fixed;
   top: 0;
-  left: 14dvw;
+  left: 10dvw;
   right: 0;
   z-index: 99;
 }
 
 .chat-title {
+  margin-left: 10dvw;
   font-size: 18px;
   font-weight: bold;
   color: #ffffff;
