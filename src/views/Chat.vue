@@ -1137,6 +1137,23 @@ const sendMessage = async () => {
             currentConv.messages = [...messages.value];
         }
 
+        // 立即设置生成状态和加载动画，不等任何API返回
+        isGenerating.value = true;
+        statusMessage.value = '建立连接中';
+
+        // 立即创建AI消息占位符
+        const aiMsg = {
+            id: `local-ai-${Date.now()}`,
+            sender: 'AI助手',
+            content: '',
+            time: new Date().toLocaleTimeString(),
+            isStreaming: true,
+            messagePairId: null,
+            modelId: selectedModelId.value
+        };
+        messages.value.push(aiMsg);
+        scrollToBottom();
+
         // 准备发送的数据
         const sendData = {
             question: fullContent,
@@ -1150,59 +1167,48 @@ const sendMessage = async () => {
             sendData.urlList = uploadedImages.value.map(img => img.url);
         }
 
-        // 发送消息到后端获取sessionId
-        const response = await chatApi.sendMessage(sendData);
-
-        // console.log('发送消息API响应:', response); // 添加调试日志
-
         // 先清空目前的上传列表
+        const imagesToClear = [...uploadedImages.value];
         uploadedImages.value = [];
 
+        // 发送消息到后端获取sessionId
+        let response;
+        try {
+            response = await chatApi.sendMessage(sendData);
+        } catch (error) {
+            console.error('发送消息失败:', error);
+            aiMsg.isStreaming = false;
+            aiMsg.content = '发送消息失败，请检查网络或重试。';
+            isGenerating.value = false;
+            statusMessage.value = '';
+            return;
+        }
+
         if (response.code === 200) {
-            const streamSessionId = response.data; // 后端返回的sessionId
+            const streamSessionId = response.data;
+            currentStreamSessionId.value = streamSessionId;
 
-            // 保存用户消息到数据库
-            let messagePairId = null;
-            try {
-                const messageData = {
-                    sessionId: activeConversationId.value,
-                    sseSessionId: streamSessionId, // 使用获取到的SSE会话ID
-                    userContent: fullContent,
-                    aiContent: '', // AI回复内容暂时为空
-                    modelUsed: selectedModelId.value, // 默认模型ID
-                    status: 0, // 0-生成中
-                    tokens: 0, // 暂时为0
-                    createTime: new Date(),
-                    responseTime: null
-                };
-
-                const saveResponse = await messageApi.addMessage(messageData);
+            // 后台保存用户消息到数据库，不阻塞UI
+            messageApi.addMessage({
+                sessionId: activeConversationId.value,
+                sseSessionId: streamSessionId,
+                userContent: fullContent,
+                aiContent: '',
+                modelUsed: selectedModelId.value,
+                status: 0,
+                tokens: 0,
+                createTime: new Date(),
+                responseTime: null
+            }).then(saveResponse => {
                 if (saveResponse.code === 200) {
-                    messagePairId = saveResponse.data; // 保存消息对ID
-                    console.log('用户消息已保存到数据库，消息对ID:', messagePairId);
+                    aiMsg.messagePairId = saveResponse.data;
+                    console.log('用户消息已保存到数据库，消息对ID:', saveResponse.data);
                 } else {
                     console.error('保存用户消息失败:', saveResponse.message);
                 }
-            } catch (error) {
+            }).catch(error => {
                 console.error('保存用户消息失败:', error);
-            }
-
-            // 先设置生成状态和默认状态消息（在创建AI消息之前）
-            isGenerating.value = true;
-            currentStreamSessionId.value = streamSessionId;
-            statusMessage.value = '建立连接中';
-
-            // 创建AI消息占位符
-            const aiMsg = {
-                id: `local-ai-${Date.now()}`,
-                sender: 'AI助手',
-                content: '',
-                time: new Date().toLocaleTimeString(),
-                isStreaming: true,
-                messagePairId: messagePairId, // 关联消息对ID
-                modelId: selectedModelId.value // 保存使用的模型ID
-            };
-            messages.value.push(aiMsg);
+            });
 
             // 1. 先建立状态通知SSE连接（使用当前会话ID）
             console.log('准备建立状态通知SSE连接...');
@@ -1215,7 +1221,6 @@ const sendMessage = async () => {
                     const statusText = event.data;
                     if (statusText && statusText.trim()) {
                         console.log('接收到状态消息:', statusText);
-                        // 更新状态消息（会覆盖默认的"正在连接服务器..."）
                         statusMessage.value = statusText.trim();
                     }
                 } catch (error) {
