@@ -317,34 +317,86 @@
 
 /* 流式消息样式 */
 
-/* 状态消息样式 */
-.status-message {
+/* 统一流式加载动画 */
+.stream-loading {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background-color: rgba(99, 226, 183, 0.1);
-  border-radius: 6px;
-  font-size: 13px;
-  color: #63e2b7;
+  gap: 10px;
+  padding: 10px 14px;
+  background-color: rgba(99, 226, 183, 0.06);
+  border-radius: 8px;
   margin-bottom: 8px;
-  animation: fadeIn 0.3s ease-in;
+  animation: streamFadeIn 0.3s ease-in;
 }
 
-.status-message .n-spin {
-  flex-shrink: 0;
+.stream-loading-dots {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
-.status-message > span {
-  flex: 1;
+.stream-loading-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #63e2b7;
+  animation: streamPulse 1.4s infinite ease-in-out;
+}
+
+.stream-loading-dots span:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.stream-loading-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.stream-loading-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes streamPulse {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.3;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.stream-loading-text {
+  background: linear-gradient(
+    90deg,
+    #36d399 0%,
+    #a7f3d0 25%,
+    #63e2b7 50%,
+    #a7f3d0 75%,
+    #36d399 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: streamTextFlow 2s linear infinite;
+  font-size: 13px;
+  font-weight: 500;
   line-height: 1.4;
   word-break: break-word;
 }
 
-@keyframes fadeIn {
+@keyframes streamTextFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+@keyframes streamFadeIn {
   from {
     opacity: 0;
     transform: translateY(-5px);
@@ -352,43 +404,6 @@
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-/* 打字指示器动画 */
-.typing-indicator {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 0;
-}
-
-.typing-indicator span {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: #666;
-  animation: typing 1.4s infinite ease-in-out;
-}
-
-.typing-indicator span:nth-child(1) {
-  animation-delay: -0.32s;
-}
-
-.typing-indicator span:nth-child(2) {
-  animation-delay: -0.16s;
-}
-
-@keyframes typing {
-  0%,
-  80%,
-  100% {
-    transform: scale(0.8);
-    opacity: 0.5;
-  }
-  40% {
-    transform: scale(1);
-    opacity: 1;
   }
 }
 

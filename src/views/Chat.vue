@@ -129,17 +129,14 @@
                                     </div>
                                     <span class="time">{{ msg.time }}</span>
                                 </div>
-                                <!-- 状态消息显示（在AI消息开始前显示） -->
-                                <div v-if="msg.isStreaming && !msg.content && statusMessage" class="status-message">
-                                    <n-spin size="small" :style="{ width: '16px', height: '16px' }" />
-                                    <span>{{ statusMessage }}</span>
+                                <!-- 统一加载动画（在AI消息开始前显示） -->
+                                <div v-if="msg.isStreaming && !msg.content" class="stream-loading">
+                                    <div class="stream-loading-dots">
+                                        <span></span><span></span><span></span>
+                                    </div>
+                                    <span class="stream-loading-text">{{ statusMessage || '建立连接中' }}</span>
                                 </div>
                                 <div class="message-content markdown-body" v-html="formatMessageContent(msg.content)">
-                                </div>
-                                <div v-if="msg.isStreaming && !msg.content && !statusMessage" class="typing-indicator">
-                                    <span></span>
-                                    <span></span>
-                                    <span></span>
                                 </div>
                             </div>
                         </div>
@@ -1193,7 +1190,7 @@ const sendMessage = async () => {
             // 先设置生成状态和默认状态消息（在创建AI消息之前）
             isGenerating.value = true;
             currentStreamSessionId.value = streamSessionId;
-            statusMessage.value = '正在连接服务器...'; // 设置默认状态消息
+            statusMessage.value = '建立连接中';
 
             // 创建AI消息占位符
             const aiMsg = {
