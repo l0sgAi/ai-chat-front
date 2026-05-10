@@ -154,7 +154,14 @@
                                         </svg>
                                     </div>
                                     <div v-show="msg.thinkingExpanded" class="thinking-content">
-                                        {{ preprocessContent(msg.thinkingContent) }}
+                                        <MdPreview
+                                            :model-value="preprocessContent(msg.thinkingContent)"
+                                            theme="dark"
+                                            preview-theme="github"
+                                            code-theme="atom-one-dark"
+                                            :no-img-zoom-in="true"
+                                            :code-foldable="false"
+                                        />
                                     </div>
                                 </div>
                                 <MdPreview v-if="msg.content"
