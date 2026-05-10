@@ -143,6 +143,7 @@
                                     preview-theme="github"
                                     code-theme="atom-one-dark"
                                     :no-img-zoom-in="true"
+                                    :code-foldable="false"
                                 />
                             </div>
                         </div>
