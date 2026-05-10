@@ -130,11 +130,32 @@
                                     <span class="time">{{ msg.time }}</span>
                                 </div>
                                 <!-- 统一加载动画（在AI消息开始前显示） -->
-                                <div v-if="msg.isStreaming && !msg.content" class="stream-loading">
+                                <div v-if="msg.isStreaming && !msg.content && !msg.thinkingContent" class="stream-loading">
                                     <div class="stream-loading-dots">
                                         <span></span><span></span><span></span>
                                     </div>
                                     <span class="stream-loading-text">{{ statusMessage || '建立连接中' }}</span>
+                                </div>
+                                <!-- 思考过程（推理模型） -->
+                                <div v-if="msg.thinkingContent" class="thinking-block" :class="{ 'thinking-collapsed': !msg.thinkingExpanded }">
+                                    <div class="thinking-header" @click="msg.thinkingExpanded = !msg.thinkingExpanded; messages = [...messages]">
+                                        <div class="thinking-header-left">
+                                            <svg class="thinking-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M12 2a8 8 0 0 0-8 8c0 3.4 2.1 6.3 5 7.5V20h6v-2.5c2.9-1.2 5-4.1 5-7.5a8 8 0 0 0-8-8z"/>
+                                                <path d="M9 22h6"/>
+                                            </svg>
+                                            <span class="thinking-label">思考过程</span>
+                                            <div v-if="msg.isStreaming" class="thinking-loading-dots">
+                                                <span></span><span></span><span></span>
+                                            </div>
+                                        </div>
+                                        <svg class="thinking-toggle" :class="{ 'thinking-toggle-expanded': msg.thinkingExpanded }" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"/>
+                                        </svg>
+                                    </div>
+                                    <div v-show="msg.thinkingExpanded" class="thinking-content">
+                                        {{ preprocessContent(msg.thinkingContent) }}
+                                    </div>
                                 </div>
                                 <MdPreview v-if="msg.content"
                                     class="message-content"
@@ -719,6 +740,21 @@ onBeforeUnmount(() => {
     }
 });
 
+// 解析历史消息中的 <thinking> 标签
+const parseAiContent = (aiContent) => {
+    const match = aiContent.match(/^<thinking>([\s\S]*?)<\/thinking>([\s\S]*)$/);
+    if (match) {
+        return {
+            thinking: match[1],
+            content: match[2]
+        };
+    }
+    return {
+        thinking: null,
+        content: aiContent
+    };
+};
+
 // 将消息对转换为前端消息格式的辅助函数
 const convertMessagePairToMessages = (msgPair) => {
     const pairMessages = [];
@@ -738,10 +774,13 @@ const convertMessagePairToMessages = (msgPair) => {
 
     // 添加AI回复消息
     if (msgPair.aiContent) {
+        const { thinking, content } = parseAiContent(msgPair.aiContent);
         pairMessages.push({
             id: `ai-${msgPair.id}`,
             sender: 'AI助手',
-            content: msgPair.aiContent,
+            content: content,
+            thinkingContent: thinking || '',
+            thinkingExpanded: false,
             time: msgPair.responseTime ? new Date(msgPair.responseTime).toLocaleTimeString() : new Date(msgPair.createTime).toLocaleTimeString(),
             createTime: msgPair.responseTime || msgPair.createTime,
             pairId: msgPair.id, // 保存消息对ID
@@ -1148,6 +1187,8 @@ const sendMessage = async () => {
             id: `local-ai-${Date.now()}`,
             sender: 'AI助手',
             content: '',
+            thinkingContent: '',
+            thinkingExpanded: true,
             time: new Date().toLocaleTimeString(),
             isStreaming: true,
             messagePairId: null,
@@ -1252,6 +1293,24 @@ const sendMessage = async () => {
             const eventSource = chatApi.createSSEConnection(streamSessionId);
             currentEventSource.value = eventSource;
 
+            // 监听思考过程事件（推理模型如 DeepSeek-R1、QWQ）
+            eventSource.addEventListener('thinking', (event) => {
+                try {
+                    const text = event.data;
+                    if (text && text.trim()) {
+                        if (statusMessage.value) {
+                            statusMessage.value = '';
+                        }
+                        aiMsg.thinkingContent = (aiMsg.thinkingContent || '') + text;
+                        aiMsg.thinkingExpanded = true;
+                        messages.value = [...messages.value];
+                        scrollToBottom();
+                    }
+                } catch (error) {
+                    console.error('处理思考过程数据失败:', error, event);
+                }
+            });
+
             eventSource.onmessage = (event) => {
                 try {
                     // console.log('接收到SSE数据:', event.data); // 调试日志
@@ -1261,6 +1320,10 @@ const sendMessage = async () => {
                         // 当开始接收到AI回答时，清空状态消息
                         if (statusMessage.value) {
                             statusMessage.value = '';
+                        }
+                        // 正式回复开始后，自动折叠思考过程
+                        if (aiMsg.thinkingContent) {
+                            aiMsg.thinkingExpanded = false;
                         }
                         // console.log('处理文本内容:', text); // 调试日志
                         // 确保aiMsg.content是字符串类型，然后累加内容
