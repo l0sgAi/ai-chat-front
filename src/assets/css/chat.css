@@ -154,39 +154,22 @@
   border: 2px solid #191720;
 }
 
-/* 代码高亮样式优化 - 更高优先级 */
-.message-content.markdown-body pre,
-.markdown-body pre {
-  border-radius: 6px !important;
-  padding: 16px !important;
-  margin: 8px 0 !important;
-  overflow-x: auto !important;
-  font-size: 14px !important;
-  line-height: 1.4 !important;
+/* md-editor-v3 预览组件适配 */
+.message-content {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
-.message-content.markdown-body code,
-.markdown-body code {
-  background-color: #3e3d32 !important;
-  color: #f8f8f2 !important;
-  padding: 2px 6px !important;
-  border-radius: 4px !important;
-  font-family: "Consolas", "Monaco", "Courier New", monospace !important;
-  font-size: 13px !important;
-}
-
-.message-content.markdown-body pre code,
-.markdown-body pre code {
-  background-color: transparent !important;
+.message-content .md-editor-preview-wrapper {
+  background: transparent !important;
   padding: 0 !important;
-  border-radius: 0 !important;
-  color: inherit !important;
+  min-height: auto !important;
 }
 
-/* 确保代码块在消息气泡中正确显示 */
-.message-bubble .markdown-body pre {
-  max-width: 100% !important;
-  word-wrap: break-word !important;
+.message-content .md-editor-preview {
+  background: transparent !important;
+  padding: 0 !important;
 }
 
 .conversation-item {
@@ -414,125 +397,6 @@
   word-wrap: break-word;
 }
 
-/* GitHub Markdown样式适配 */
-.message-content.markdown-body {
-  background: transparent !important;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans",
-    Helvetica, Arial, sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
-  color: inherit;
-  padding: 0;
-  margin-top: 8px;
-  box-sizing: border-box;
-  word-wrap: break-word;
-}
-
-/* 确保AI消息使用markdown样式 */
-.ai-message .message-content.markdown-body {
-  color: #e6edf3; /* 深色主题下的文字颜色 */
-}
-
-.user-message .message-content.markdown-body {
-  color: #ffffff; /* 用户消息保持白色 */
-}
-
-/* 代码块样式优化 - 深色主题适配 */
-.message-content.markdown-body pre {
-  background-color: #161b22;
-  border: 1px solid #30363d;
-  border-radius: 6px;
-  padding: 16px;
-  overflow: auto;
-  font-size: 85%;
-  line-height: 1.45;
-  margin: 8px 0;
-  color: #e6edf3;
-}
-
-.message-content.markdown-body code {
-  background-color: rgba(110, 118, 129, 0.4);
-  padding: 0.2em 0.4em;
-  border-radius: 3px;
-  font-size: 85%;
-  color: #f0f6fc;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas,
-    "Liberation Mono", Menlo, monospace;
-}
-
-.message-content.markdown-body pre code {
-  background: transparent;
-  padding: 0;
-  border-radius: 0;
-  font-size: 100%;
-  color: inherit;
-}
-
-/* highlight.js 代码高亮样式覆盖 - 深色主题 */
-.message-content.markdown-body .hljs {
-  background: #161b22 !important;
-  color: #e6edf3 !important;
-  padding: 16px;
-  border-radius: 6px;
-  overflow: auto;
-}
-
-/* 确保highlight.js的语法高亮颜色在深色主题下可见 */
-.message-content.markdown-body .hljs-keyword,
-.message-content.markdown-body .hljs-selector-tag,
-.message-content.markdown-body .hljs-literal,
-.message-content.markdown-body .hljs-section,
-.message-content.markdown-body .hljs-link {
-  color: #ff7b72 !important;
-}
-
-.message-content.markdown-body .hljs-string,
-.message-content.markdown-body .hljs-title,
-.message-content.markdown-body .hljs-name,
-.message-content.markdown-body .hljs-type,
-.message-content.markdown-body .hljs-attribute,
-.message-content.markdown-body .hljs-symbol,
-.message-content.markdown-body .hljs-bullet,
-.message-content.markdown-body .hljs-addition,
-.message-content.markdown-body .hljs-variable,
-.message-content.markdown-body .hljs-template-tag,
-.message-content.markdown-body .hljs-template-variable {
-  color: #a5d6ff !important;
-}
-
-.message-content.markdown-body .hljs-comment,
-.message-content.markdown-body .hljs-quote,
-.message-content.markdown-body .hljs-deletion,
-.message-content.markdown-body .hljs-meta {
-  color: #8b949e !important;
-}
-
-.message-content.markdown-body .hljs-number,
-.message-content.markdown-body .hljs-regexp,
-.message-content.markdown-body .hljs-literal {
-  color: #79c0ff !important;
-}
-
-.message-content.markdown-body .hljs-built_in,
-.message-content.markdown-body .hljs-builtin-name,
-.message-content.markdown-body .hljs-class .hljs-title {
-  color: #ffa657 !important;
-}
-
-/* 表格样式 */
-.message-content.markdown-body table {
-  border-collapse: collapse;
-  margin: 8px 0;
-  border: 1px solid #30363d;
-}
-
-.message-content.markdown-body th,
-.message-content.markdown-body td {
-  border: 1px solid #30363d;
-  padding: 6px 13px;
-  color: #e6edf3;
-}
-
 /* 消息中的图片样式 */
 .message-images {
   margin-bottom: 8px;
@@ -555,78 +419,6 @@
 
 .message-image-item:last-child {
   margin-right: 0;
-}
-
-/* markdown渲染的图片样式 */
-.message-content.markdown-body img {
-  max-width: 200px;
-  max-height: 200px;
-  border-radius: 6px;
-  margin: 4px 8px 4px 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  transition: transform 0.2s ease;
-  object-fit: cover;
-}
-
-.message-content.markdown-body img:hover {
-  transform: scale(1.02);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-}
-
-.message-content.markdown-body th {
-  background-color: #161b22;
-  font-weight: 600;
-  color: #e6edf3;
-}
-
-/* 引用块样式 */
-.message-content.markdown-body blockquote {
-  border-left: 4px solid #d0d7de;
-  padding: 0 16px;
-  margin: 8px 0;
-  color: #656d76;
-}
-
-/* 列表样式 */
-.message-content.markdown-body ul,
-.message-content.markdown-body ol {
-  padding-left: 2em;
-  margin: 8px 0;
-}
-
-/* 标题样式 */
-.message-content.markdown-body h1,
-.message-content.markdown-body h2,
-.message-content.markdown-body h3,
-.message-content.markdown-body h4,
-.message-content.markdown-body h5,
-.message-content.markdown-body h6 {
-  margin-top: 16px;
-  margin-bottom: 8px;
-  font-weight: 600;
-  line-height: 1.25;
-}
-
-.message-content.markdown-body h1 {
-  font-size: 1.5em;
-  border-bottom: 1px solid #d0d7de;
-  padding-bottom: 8px;
-}
-
-.message-content.markdown-body h2 {
-  font-size: 1.25em;
-  border-bottom: 1px solid #d0d7de;
-  padding-bottom: 8px;
-}
-
-/* 链接样式 */
-.message-content.markdown-body a {
-  color: #0969da;
-  text-decoration: none;
-}
-
-.message-content.markdown-body a:hover {
-  text-decoration: underline;
 }
 
 .user-message .message-bubble {
@@ -685,7 +477,6 @@
 
 .message-content {
   word-break: break-word;
-  line-height: 1.5;
 }
 
 /* 底部输入区域 */
@@ -717,6 +508,15 @@
 .input-area {
   padding: 7px;
   background-color: #1a1a1a;
+}
+
+.md-editor-preview table tr th, .md-editor-preview table tr td{
+  background-color: #1a1a1a;
+}
+
+.md-editor-preview code{
+  font-family: 'Consolas', monospace;
+  font-size: 14px;
 }
 
 .chat-input {
@@ -789,29 +589,6 @@
 .send-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-/* 数学公式样式 */
-.math-block {
-  margin: 16px 0;
-  text-align: center;
-  overflow-x: auto;
-  padding: 8px;
-  background-color: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
-}
-
-.math-inline {
-  display: inline;
-  margin: 0 2px;
-}
-
-.math-error {
-  color: #ff6b6b;
-  background-color: rgba(255, 107, 107, 0.1);
-  padding: 2px 4px;
-  border-radius: 3px;
-  font-family: monospace;
 }
 
 /* KaTeX 样式调整 */
@@ -996,17 +773,6 @@
   max-height: 80vh;
   object-fit: contain;
   border-radius: 4px;
-}
-
-/* 聊天消息中的图片点击效果 */
-.message-content.markdown-body img.chat-image-preview {
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.message-content.markdown-body img.chat-image-preview:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 /* 全局搜索Modal样式 */
