@@ -443,6 +443,7 @@ const currentEventSource = ref(null);
 const currentStreamSessionId = ref(null);
 const currentStatusEventSource = ref(null); // 状态通知SSE连接
 const statusMessage = ref(''); // 当前状态消息
+let sseTimeoutHandle = null; // SSE超时定时器句柄
 
 // 图片预览相关
 const showImageModal = ref(false);
@@ -1323,6 +1324,7 @@ const sendMessage = async () => {
                         aiMsg.thinkingExpanded = true;
                         messages.value = [...messages.value];
                         scrollToBottom();
+                        resetSSETimeout(aiMsg, eventSource);
                     }
                 } catch (error) {
                     console.error('处理思考过程数据失败:', error, event);
@@ -1350,6 +1352,7 @@ const sendMessage = async () => {
                         messages.value = [...messages.value];
                         // 每次接收到新内容时滚动到底部
                         scrollToBottom();
+                        resetSSETimeout(aiMsg, eventSource);
                     }
                 } catch (error) {
                     console.error('处理SSE数据失败:', error, event);
@@ -1357,6 +1360,7 @@ const sendMessage = async () => {
             };
 
             eventSource.onerror = (error) => {
+                clearSSETimeout();
                 console.error('AI回答SSE连接错误:', error);
                 aiMsg.isStreaming = false;
                 isGenerating.value = false;
@@ -1385,6 +1389,7 @@ const sendMessage = async () => {
 
             // 监听流结束事件
             eventSource.addEventListener('close', () => {
+                clearSSETimeout();
                 console.log('AI回答SSE流已结束');
                 aiMsg.isStreaming = false;
                 isGenerating.value = false;
@@ -1409,27 +1414,8 @@ const sendMessage = async () => {
                 console.log('AI回复完成，后端会自动更新数据库中的AI回复内容');
             });
 
-            // 设置超时处理
-            setTimeout(() => {
-                if (aiMsg.isStreaming && !aiMsg.content) {
-                    console.warn('SSE连接超时，未接收到数据');
-                    aiMsg.isStreaming = false;
-                    isGenerating.value = false;
-                    currentEventSource.value = null;
-                    currentStreamSessionId.value = null;
-                    statusMessage.value = ''; // 清空状态消息
-                    aiMsg.content = '连接超时，请检查网络或重试。';
-                    eventSource.close();
-                    
-                    // 同时关闭状态通知SSE
-                    if (currentStatusEventSource.value) {
-                        currentStatusEventSource.value.close();
-                        currentStatusEventSource.value = null;
-                    }
-                    
-                    message.warning('连接超时，请重试');
-                }
-            }, 30000); // 30秒超时
+            // 启动SSE超时监控（5分钟内无任何数据则断开）
+            resetSSETimeout(aiMsg, eventSource);
 
         } else {
             message.error(`发送失败: ${response.message}`);
@@ -1448,8 +1434,41 @@ const sendMessage = async () => {
     newMessage.value = '';
 };
 
+// SSE超时管理
+const clearSSETimeout = () => {
+    if (sseTimeoutHandle) {
+        clearTimeout(sseTimeoutHandle);
+        sseTimeoutHandle = null;
+    }
+};
+
+const resetSSETimeout = (aiMsg, eventSource, timeoutMs = 300000) => {
+    clearSSETimeout();
+    sseTimeoutHandle = setTimeout(() => {
+        if (aiMsg.isStreaming && !aiMsg.content && !aiMsg.thinkingContent) {
+            console.warn('SSE连接超时，未接收到任何数据');
+            aiMsg.isStreaming = false;
+            isGenerating.value = false;
+            currentEventSource.value = null;
+            currentStreamSessionId.value = null;
+            statusMessage.value = '';
+            aiMsg.content = '连接超时，请检查网络或重试。';
+            eventSource.close();
+
+            if (currentStatusEventSource.value) {
+                currentStatusEventSource.value.close();
+                currentStatusEventSource.value = null;
+            }
+
+            message.warning('连接超时，请重试');
+        }
+    }, timeoutMs);
+};
+
 // 停止AI生成
 const stopGeneration = async () => {
+    clearSSETimeout();
+
     if (!currentStreamSessionId.value) {
         console.warn('没有找到当前的SSE会话ID');
         return;
