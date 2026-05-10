@@ -138,7 +138,7 @@
                                 </div>
                                 <!-- 思考过程（推理模型） -->
                                 <div v-if="msg.thinkingContent" class="thinking-block" :class="{ 'thinking-collapsed': !msg.thinkingExpanded }">
-                                    <div class="thinking-header" @click="msg.thinkingExpanded = !msg.thinkingExpanded; messages = [...messages]">
+                                    <div class="thinking-header" @click="toggleThinking(msg)">
                                         <div class="thinking-header-left">
                                             <svg class="thinking-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
                                                 <path d="M12 2a8 8 0 0 0-8 8c0 3.4 2.1 6.3 5 7.5V20h6v-2.5c2.9-1.2 5-4.1 5-7.5a8 8 0 0 0-8-8z"/>
@@ -655,10 +655,21 @@ const scrollToBottom = async (instant = false) => {
     }
 };
 
+// 切换思考过程展开/收起
+const skipNextScroll = ref(false);
+const toggleThinking = (msg) => {
+    skipNextScroll.value = true;
+    msg.thinkingExpanded = !msg.thinkingExpanded;
+};
+
 // 监听消息变化，自动滚动到底部
 watch(messages, () => {
     // 如果正在切换会话，不自动滚动（由switchConversation手动控制）
     // 如果正在加载历史消息，不自动滚动（由loadMoreMessages手动控制滚动位置）
+    if (skipNextScroll.value) {
+        skipNextScroll.value = false;
+        return;
+    }
     if (!isSwitchingConversation.value && !loadingMessages.value) {
         scrollToBottom();
     }
