@@ -465,6 +465,18 @@
   animation-delay: 0.4s;
 }
 
+.thinking-done-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  font-size: 11px;
+  color: #63e2b7;
+  background: rgba(99, 226, 183, 0.1);
+  border-radius: 10px;
+  border: 1px solid rgba(99, 226, 183, 0.25);
+  line-height: 1.6;
+}
+
 .thinking-toggle {
   color: #63e2b7;
   transition: transform 0.2s ease;

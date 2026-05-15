@@ -148,6 +148,7 @@
                                             <div v-if="msg.isStreaming" class="thinking-loading-dots">
                                                 <span></span><span></span><span></span>
                                             </div>
+                                            <span v-else class="thinking-done-badge">已完成</span>
                                         </div>
                                         <svg class="thinking-toggle" :class="{ 'thinking-toggle-expanded': msg.thinkingExpanded }" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
                                             <polyline points="6 9 12 15 18 9"/>
@@ -1241,6 +1242,7 @@ const sendMessage = async () => {
             console.error('发送消息失败:', error);
             aiMsg.isStreaming = false;
             aiMsg.content = '发送消息失败，请检查网络或重试。';
+            messages.value = [...messages.value];
             isGenerating.value = false;
             statusMessage.value = '';
             return;
@@ -1363,6 +1365,7 @@ const sendMessage = async () => {
                 clearSSETimeout();
                 console.error('AI回答SSE连接错误:', error);
                 aiMsg.isStreaming = false;
+                messages.value = [...messages.value];
                 isGenerating.value = false;
                 currentEventSource.value = null;
                 currentStreamSessionId.value = null;
@@ -1392,6 +1395,7 @@ const sendMessage = async () => {
                 clearSSETimeout();
                 console.log('AI回答SSE流已结束');
                 aiMsg.isStreaming = false;
+                messages.value = [...messages.value];
                 isGenerating.value = false;
                 currentEventSource.value = null;
                 currentStreamSessionId.value = null;
@@ -1448,6 +1452,7 @@ const resetSSETimeout = (aiMsg, eventSource, timeoutMs = 300000) => {
         if (aiMsg.isStreaming && !aiMsg.content && !aiMsg.thinkingContent) {
             console.warn('SSE连接超时，未接收到任何数据');
             aiMsg.isStreaming = false;
+            messages.value = [...messages.value];
             isGenerating.value = false;
             currentEventSource.value = null;
             currentStreamSessionId.value = null;
