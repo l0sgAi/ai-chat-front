@@ -7,8 +7,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        // TODO 修改为后端接口地址
-        target: 'http://192.168.200.132:8575',
+        // TODO 修改为后端接口地址 localhost
+        target: 'http://localhost:8575',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
         timeout: 300000,
