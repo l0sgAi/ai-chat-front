@@ -1252,28 +1252,6 @@ const sendMessage = async () => {
             const streamSessionId = response.data;
             currentStreamSessionId.value = streamSessionId;
 
-            // 后台保存用户消息到数据库，不阻塞UI
-            messageApi.addMessage({
-                sessionId: activeConversationId.value,
-                sseSessionId: streamSessionId,
-                userContent: fullContent,
-                aiContent: '',
-                modelUsed: selectedModelId.value,
-                status: 0,
-                tokens: 0,
-                createTime: new Date(),
-                responseTime: null
-            }).then(saveResponse => {
-                if (saveResponse.code === 200) {
-                    aiMsg.messagePairId = saveResponse.data;
-                    console.log('用户消息已保存到数据库，消息对ID:', saveResponse.data);
-                } else {
-                    console.error('保存用户消息失败:', saveResponse.message);
-                }
-            }).catch(error => {
-                console.error('保存用户消息失败:', error);
-            });
-
             // 1. 先建立状态通知SSE连接（使用当前会话ID）
             console.log('准备建立状态通知SSE连接...');
             const statusEventSource = chatApi.createStatusSSEConnection(activeConversationId.value);
