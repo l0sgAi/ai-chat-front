@@ -442,7 +442,6 @@ const isUploading = ref(false);
 const isGenerating = ref(false);
 const currentEventSource = ref(null);
 const currentStreamSessionId = ref(null);
-const currentStatusEventSource = ref(null); // 状态通知SSE连接
 const statusMessage = ref(''); // 当前状态消息
 let sseTimeoutHandle = null; // SSE超时定时器句柄
 
@@ -1252,43 +1251,8 @@ const sendMessage = async () => {
             const streamSessionId = response.data;
             currentStreamSessionId.value = streamSessionId;
 
-            // 1. 先建立状态通知SSE连接（使用当前会话ID）
-            console.log('准备建立状态通知SSE连接...');
-            const statusEventSource = chatApi.createStatusSSEConnection(activeConversationId.value);
-            currentStatusEventSource.value = statusEventSource;
-
-            // 状态通知SSE消息处理
-            statusEventSource.onmessage = (event) => {
-                try {
-                    const statusText = event.data;
-                    if (statusText && statusText.trim()) {
-                        console.log('接收到状态消息:', statusText);
-                        statusMessage.value = statusText.trim();
-                    }
-                } catch (error) {
-                    console.error('处理状态消息失败:', error);
-                }
-            };
-
-            statusEventSource.onerror = (error) => {
-                console.error('状态通知SSE连接错误:', error);
-                statusEventSource.close();
-                currentStatusEventSource.value = null;
-            };
-
-            statusEventSource.onopen = () => {
-                console.log('状态通知SSE连接已建立');
-            };
-
-            // 监听状态通知流结束事件
-            statusEventSource.addEventListener('close', () => {
-                console.log('状态通知SSE流已结束');
-                statusEventSource.close();
-                currentStatusEventSource.value = null;
-            });
-
-            // 2. 建立AI回答SSE连接（使用推流sessionId）
-            console.log('准备建立AI回答SSE连接...');
+            // 建立SSE连接（使用推流sessionId）
+            console.log('准备建立SSE连接...');
             const eventSource = chatApi.createSSEConnection(streamSessionId);
             currentEventSource.value = eventSource;
 
@@ -1308,6 +1272,21 @@ const sendMessage = async () => {
                     }
                 } catch (error) {
                     console.error('处理思考过程数据失败:', error, event);
+                }
+            });
+
+            // 监听状态通知事件
+            eventSource.addEventListener('status', (event) => {
+                try {
+                    const statusText = event.data;
+                    if (statusText && statusText.trim()) {
+                        console.log('接收到状态消息:', statusText);
+                        statusMessage.value = statusText.trim();
+                        scrollToBottom();
+                        resetSSETimeout(aiMsg, eventSource);
+                    }
+                } catch (error) {
+                    console.error('处理状态消息失败:', error);
                 }
             });
 
@@ -1350,12 +1329,6 @@ const sendMessage = async () => {
                 statusMessage.value = ''; // 清空状态消息
                 eventSource.close();
 
-                // 同时关闭状态通知SSE
-                if (currentStatusEventSource.value) {
-                    currentStatusEventSource.value.close();
-                    currentStatusEventSource.value = null;
-                }
-
                 // 如果没有接收到任何内容，显示错误信息
                 if (!aiMsg.content) {
                     aiMsg.content = '抱歉，接收消息时出现错误，请重试。';
@@ -1379,12 +1352,6 @@ const sendMessage = async () => {
                 currentStreamSessionId.value = null;
                 statusMessage.value = ''; // 清空状态消息
                 eventSource.close();
-
-                // 同时关闭状态通知SSE
-                if (currentStatusEventSource.value) {
-                    currentStatusEventSource.value.close();
-                    currentStatusEventSource.value = null;
-                }
 
                 // 更新会话列表中的最后消息
                 if (currentConv && aiMsg.content) {
@@ -1438,11 +1405,6 @@ const resetSSETimeout = (aiMsg, eventSource, timeoutMs = 300000) => {
             aiMsg.content = '连接超时，请检查网络或重试。';
             eventSource.close();
 
-            if (currentStatusEventSource.value) {
-                currentStatusEventSource.value.close();
-                currentStatusEventSource.value = null;
-            }
-
             message.warning('连接超时，请重试');
         }
     }, timeoutMs);
@@ -1475,12 +1437,6 @@ const stopGeneration = async () => {
     if (currentEventSource.value) {
         currentEventSource.value.close();
         currentEventSource.value = null;
-    }
-
-    // 关闭状态通知SSE连接
-    if (currentStatusEventSource.value) {
-        currentStatusEventSource.value.close();
-        currentStatusEventSource.value = null;
     }
 
     // 找到正在生成的AI消息并停止流式状态
