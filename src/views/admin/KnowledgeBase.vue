@@ -72,24 +72,8 @@
                 :loading="tableLoading"
                 :bordered="false"
                 size="small"
+                remote
             />
-            
-            <!-- 加载更多按钮 -->
-            <div v-if="hasMore && tableData.length > 0" class="kb-load-more">
-                <n-button 
-                    @click="loadMoreData" 
-                    :loading="tableLoading"
-                    :disabled="tableLoading"
-                    size="medium"
-                >
-                    加载更多
-                </n-button>
-            </div>
-            
-            <!-- 没有更多数据提示 -->
-            <div v-if="!hasMore && tableData.length > 0" class="kb-no-more">
-                <n-text depth="3">已加载全部数据</n-text>
-            </div>
         </div>
 
         <!-- 新增知识库文档弹窗 -->
@@ -386,7 +370,6 @@ import {
     NDescriptionsItem,
     NScrollbar,
     NEllipsis,
-    NText,
     NUpload,
     NRadioGroup,
     NRadio,
@@ -410,19 +393,12 @@ const tableData = ref([]);
 const tableLoading = ref(false);
 const checkedRowKeys = ref([]);
 
-// 查询参数（游标分页）
+// 查询参数
 const queryParams = reactive({
     keyword: '',
     status: null,
-    dateRange: null,
-    lastUpdateTime: null,  // 游标，使用更新时间
-    pageSize: 10
+    dateRange: null
 });
-
-// 分页相关
-const totalCount = ref(0);        // 总数据量
-const hasMore = ref(true);        // 是否有更多数据
-const currentPage = ref(1);       // 当前页码（仅用于显示）
 
 // 分页配置
 const pagination = reactive({
@@ -432,21 +408,16 @@ const pagination = reactive({
     pageSizes: [10, 20, 50, 100],
     itemCount: 0,
     prefix: (info) => {
-        return `共 ${totalCount.value} 条`;
+        return `共 ${info.itemCount} 条`;
     },
     onChange: (page) => {
-        // 游标分页不支持跳页，只能加载更多
-        // 这里保持原有逻辑，但实际通过"加载更多"按钮实现
-        if (page > currentPage.value) {
-            loadMoreData();
-        } else {
-            // 重新查询
-            resetAndLoad();
-        }
+        pagination.page = page;
+        loadTableData();
     },
     onUpdatePageSize: (pageSize) => {
-        queryParams.pageSize = pageSize;
-        resetAndLoad();
+        pagination.pageSize = pageSize;
+        pagination.page = 1;
+        loadTableData();
     }
 });
 
@@ -701,54 +672,31 @@ const handleIndexNameSearch = (value) => {
     }
 };
 
-// 加载表格数据（游标分页）
-const loadTableData = async (append = false) => {
+// 加载表格数据
+const loadTableData = async () => {
     tableLoading.value = true;
-    
+
     try {
         // 构建查询参数
         const params = {
+            page: pagination.page,
+            pageSize: pagination.pageSize,
             keyword: queryParams.keyword || undefined,
-            status: queryParams.status !== null ? queryParams.status : undefined,
-            lastUpdateTime: queryParams.lastUpdateTime,
-            pageSize: queryParams.pageSize
+            status: queryParams.status !== null ? queryParams.status : undefined
         };
-        
+
         // 处理时间范围
         if (queryParams.dateRange && queryParams.dateRange.length === 2) {
-            // 将时间戳转换为日期字符串格式: "2025-11-01 18:22:51"
             params.startTime = formatDateTime(new Date(queryParams.dateRange[0]));
             params.endTime = formatDateTime(new Date(queryParams.dateRange[1]));
         }
-        
+
         // 调用分页接口
         const result = await ragApi.pageDocuments(params);
-        
+
         if (result.code === 200) {
-            const newData = result.data || [];
-            
-            // 追加或替换数据
-            if (append) {
-                tableData.value = [...tableData.value, ...newData];
-            } else {
-                tableData.value = newData;
-            }
-            
-            // 更新总数
-            totalCount.value = result.total || 0;
-            
-            // 更新分页显示
-            pagination.itemCount = totalCount.value;
-            
-            // 判断是否还有更多数据
-            hasMore.value = newData.length >= queryParams.pageSize;
-            
-            // 更新游标：使用最后一条数据的 updatedTime
-            if (newData.length > 0) {
-                const lastItem = newData[newData.length - 1];
-                queryParams.lastUpdateTime = formatDateTime(new Date(lastItem.updatedTime));
-            }
-            
+            tableData.value = result.data || [];
+            pagination.itemCount = result.count || 0;
         } else {
             message.error(result.message || '加载数据失败');
         }
@@ -762,22 +710,8 @@ const loadTableData = async (append = false) => {
 
 // 重置并加载（用于查询和重置）
 const resetAndLoad = () => {
-    queryParams.lastUpdateTime = null;
-    currentPage.value = 1;
     pagination.page = 1;
-    hasMore.value = true;
-    loadTableData(false);
-};
-
-// 加载更多数据
-const loadMoreData = () => {
-    if (!hasMore.value) {
-        message.info('没有更多数据了');
-        return;
-    }
-    currentPage.value++;
-    pagination.page = currentPage.value;
-    loadTableData(true);
+    loadTableData();
 };
 
 // 查询
